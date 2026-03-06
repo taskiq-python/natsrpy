@@ -1,0 +1,20 @@
+[project]
+name = "natsrpy"
+requires-python = ">=3.8"
+classifiers = [
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+  "Programming Language :: Rust",
+]
+dynamic = ["version"]
+
+[build-system]
+requires = ["maturin>=1.12,<2.0"]
+build-backend = "maturin"
+
+
+[tool.maturin]
+bindings = "pyo3"
+python-source = "python"
+module-name = "natsrpy._internal"
+features = ["pyo3/extension-module"]
