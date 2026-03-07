@@ -48,6 +48,8 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
+        env:
+          CFLAGS_aarch64_unknown_linux_gnu: ${{ matrix.platform.target == 'aarch64' && '-D__ARM_ARCH=8' || '' }}
       - name: Upload wheels
         uses: actions/upload-artifact@v6
         with:
@@ -79,6 +81,9 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
+        env:
+          CFLAGS_aarch64_unknown_linux_musl: ${{ matrix.platform.target == 'aarch64' && '-D__ARM_ARCH=8' || '' }}
+          CFLAGS_armv7_unknown_linux_musleabihf: ${{ matrix.platform.target == 'armv7' && '-D__ARM_ARCH=7' || '' }}
       - name: Upload wheels
         uses: actions/upload-artifact@v6
         with:
