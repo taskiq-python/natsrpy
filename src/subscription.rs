@@ -4,7 +4,7 @@ use std::{sync::Arc, time::Duration};
 
 use pyo3::Py;
 use pyo3::types::PyBytes;
-use pyo3::{Bound, IntoPyObjectExt, PyAny, PyRef, Python, pyclass, pymethods};
+use pyo3::{Bound, PyAny, PyRef, Python, pyclass, pymethods};
 use tokio::sync::Mutex;
 
 use crate::exceptions::rust_err::NatsrpyError;

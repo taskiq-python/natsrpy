@@ -9,4 +9,7 @@ use pyo3::pymodule;
 pub mod pymod {
     #[pymodule_export]
     use super::jetstream::JetStream;
+
+    #[pymodule_export]
+    use super::jetstream::StorageType;
 }

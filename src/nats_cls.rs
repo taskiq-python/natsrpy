@@ -205,11 +205,11 @@ impl NatsCls {
     }
 
     #[pyo3(signature = (
-        *, 
-        domain=None, 
+        *,
+        domain=None,
         api_prefix=None,
-        timeout=None, 
-        ack_timeout=None, 
+        timeout=None,
+        ack_timeout=None,
         concurrency_limit = None,
         max_ack_inflight=None,
         backpressure_on_inflight=None,
@@ -247,11 +247,13 @@ impl NatsCls {
                 builder = builder.backpressure_on_inflight(backpressure_on_inflight);
             }
             if domain.is_some() && api_prefix.is_some() {
-                return Err(NatsrpyError::InvalidArgument(String::from("Either domain or api_prefix should be specified, not both.")));
+                return Err(NatsrpyError::InvalidArgument(String::from(
+                    "Either domain or api_prefix should be specified, not both.",
+                )));
             }
             let js = if let Some(api_prefix) = api_prefix {
                 builder.api_prefix(api_prefix).build(session.clone())
-            } else if let Some(domain) = domain{
+            } else if let Some(domain) = domain {
                 builder.domain(domain).build(session.clone())
             } else {
                 builder.build(session.clone())
