@@ -35,32 +35,22 @@ pub trait PyModuleExt<'py> {
     ///
     ///  #[pymodule_init]
     ///  pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    ///      m.attach_submodule_with_sys(m.py(), pyo3::wrap_pymodule!(super::inner_mod))?;
+    ///      m.attach_submodule_with_sys(pyo3::wrap_pymodule!(super::inner_mod))?;
     ///  }
     ///}
     /// ```
     ///
-    fn attach_submodule_with_sys<ModFN>(
-        &self,
-        py: Python<'py>,
-        wrapped_submod: ModFN,
-    ) -> pyo3::PyResult<()>
+    fn attach_submodule_with_sys<ModFN>(&self, wrapped_submod: ModFN) -> pyo3::PyResult<()>
     where
         ModFN: Fn(Python<'py>) -> Py<PyModule>;
 }
 
-impl<'py, T> PyModuleExt<'py> for T
-where
-    T: PyModuleMethods<'py>,
-{
-    fn attach_submodule_with_sys<ModFN>(
-        &self,
-        py: Python<'py>,
-        wrapped_submod: ModFN,
-    ) -> pyo3::PyResult<()>
+impl<'py> PyModuleExt<'py> for pyo3::Bound<'py, PyModule> {
+    fn attach_submodule_with_sys<ModFN>(&self, wrapped_submod: ModFN) -> pyo3::PyResult<()>
     where
         ModFN: Fn(Python<'py>) -> Py<PyModule>,
     {
+        let py = self.py();
         let submod = wrapped_submod(py).into_bound(py);
         self.add_submodule(&submod)?;
         let sys_name = format!(

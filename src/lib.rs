@@ -23,8 +23,8 @@ pub mod _inner {
 
     #[pymodule_init]
     pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
-        m.attach_submodule_with_sys(m.py(), pyo3::wrap_pymodule!(super::exceptions::py_err::pymod))?;
-        m.attach_submodule_with_sys(m.py(), pyo3::wrap_pymodule!(super::js::pymod))?;
+        m.attach_submodule_with_sys(pyo3::wrap_pymodule!(super::exceptions::py_err::pymod))?;
+        m.attach_submodule_with_sys(pyo3::wrap_pymodule!(super::js::pymod))?;
         Ok(())
     }
 }
