@@ -8,3 +8,6 @@ class Message:
     status: int | None
     description: str | None
     length: int
+
+    def __repr__(self) -> str: ...
+    def __str__(self) -> str: ...

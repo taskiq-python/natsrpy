@@ -1,9 +1,5 @@
 from natsrpy._inner.js import JetStream
-
-class Message:
-    subject: str
-    reply: str | None
-    payload: bytes
+from natsrpy._inner.message import Message
 
 class Subscription:
     def __aiter__(self) -> "Subscription": ...

@@ -10,12 +10,9 @@ fn _inner_init(module: &Bound<'_, PyModule>, path: &str) -> PyResult<()> {
         let submod_name = submod_name.extract::<String>()?;
         let submod = module.getattr(&submod_name)?;
         let modpath = format!("{path}.{submod_name}");
-        match submod.cast::<PyModule>() {
-            Ok(submod) => {
-                _inner_init(&submod, &modpath)?;
-                sys_modules.set_item(&modpath, submod)?;
-            }
-            _ => continue,
+        if let Ok(submod) = submod.cast::<PyModule>() {
+            _inner_init(&submod, &modpath)?;
+            sys_modules.set_item(&modpath, submod)?;
         }
     }
     Ok(())

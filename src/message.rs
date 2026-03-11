@@ -47,3 +47,24 @@ impl Message {
         })
     }
 }
+
+#[pyo3::pymethods]
+impl Message {
+    pub fn __repr__(&self) -> String {
+        self.to_string()
+    }
+}
+
+impl ToString for Message {
+    fn to_string(&self) -> String {
+        format!(
+            r#"Message<subject="{subject}", reply={reply}, payload={payload}, headers={headers}, description={description}, length={len}>"#,
+            subject = self.subject,
+            reply = format!("{:?}", self.reply),
+            payload = self.payload.to_string(),
+            headers = self.headers.to_string(),
+            description = format!("{:?}", self.description),
+            len = self.length,
+        )
+    }
+}

@@ -15,6 +15,8 @@ pub mod _inner {
     use super::nats_cls::NatsCls;
     #[pymodule_export]
     use super::subscription::Subscription;
+    #[pymodule_export]
+    use super::message::Message;
 
     #[pymodule_export]
     use super::js::pymod as js;

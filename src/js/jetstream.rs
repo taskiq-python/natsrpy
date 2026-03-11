@@ -101,11 +101,27 @@ impl JetStream {
         })
     }
 
-    pub fn delete_kv<'py>(&self, py: Python<'py>, bucket: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn delete_kv<'py>(
+        &self,
+        py: Python<'py>,
+        bucket: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         natsrpy_future(py, async move {
             let js = ctx.read().await;
             Ok(js.delete_key_value(bucket).await?.success)
+        })
+    }
+
+    pub fn get_consumer<'py>(
+        &self,
+        py: Python<'py>,
+        bucket: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.ctx.clone();
+        natsrpy_future(py, async move {
+            let js = ctx.read().await;
+            Ok(KeyValue::new(js.get_key_value(bucket).await?))
         })
     }
 }

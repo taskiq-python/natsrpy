@@ -7,4 +7,5 @@ from natsrpy._inner import (
 __all__ = [
     "Nats",
     "Subscription",
+    "Message",
 ]
