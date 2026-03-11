@@ -46,6 +46,8 @@ pub enum NatsrpyError {
     KVPutError(#[from] async_nats::jetstream::kv::PutError),
     #[error(transparent)]
     KVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
+    #[error(transparent)]
+    DeleteError(#[from] async_nats::jetstream::kv::DeleteError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {

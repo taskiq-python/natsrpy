@@ -103,10 +103,7 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
                 .map(|val| std::time::Duration::from_secs_f32(val))
                 .unwrap_or_default(),
             max_bytes: value.max_bytes.unwrap_or_default(),
-            storage: value
-                .storage
-                .unwrap_or(super::stream::StorageType::File)
-                .into(),
+            storage: value.storage.unwrap_or_default().into(),
             num_replicas: value.num_replicas.unwrap_or_default(),
             republish: value.republish.map(|r| r.into()),
             mirror: value.mirror.map(|m| m.try_into()).transpose()?,
@@ -145,7 +142,7 @@ impl KeyValue {
 
 #[pymethods]
 impl KeyValue {
-    pub fn get<'a>(&self, py: Python<'a>, key: String) -> NatsrpyResult<Bound<'a, PyAny>> {
+    pub fn get<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             let kv = store.read().await;
@@ -158,12 +155,12 @@ impl KeyValue {
         })
     }
 
-    pub fn put<'a>(
+    pub fn put<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         key: String,
-        value: Bound<'a, PyBytes>,
-    ) -> NatsrpyResult<Bound<'a, PyAny>> {
+        value: Bound<'py, PyBytes>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         let data = bytes::Bytes::copy_from_slice(value.as_bytes());
         natsrpy_future(py, async move {
@@ -172,4 +169,18 @@ impl KeyValue {
             Ok(status)
         })
     }
+
+    pub fn delete<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            let kv = store.read().await;
+            Ok(kv.delete(key).await?)
+        })
+    }
+}
+
+#[pyo3::pymodule(submodule, name = "kv")]
+pub mod pymod {
+    #[pymodule_export]
+    use super::{KVConfig, KeyValue};
 }

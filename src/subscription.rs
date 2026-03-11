@@ -2,23 +2,11 @@ use futures_util::StreamExt;
 use pyo3::exceptions::PyStopAsyncIteration;
 use std::{sync::Arc, time::Duration};
 
-use pyo3::Py;
-use pyo3::types::PyBytes;
 use pyo3::{Bound, PyAny, PyRef, Python, pyclass, pymethods};
 use tokio::sync::Mutex;
 
 use crate::exceptions::rust_err::NatsrpyError;
 use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
-
-#[pyclass]
-pub struct Message {
-    #[pyo3(get)]
-    subject: String,
-    #[pyo3(get)]
-    reply: Option<String>,
-    #[pyo3(get)]
-    payload: Py<PyBytes>,
-}
 
 #[pyclass]
 pub struct Subscription {
@@ -40,11 +28,11 @@ impl Subscription {
         slf
     }
 
-    pub fn next<'a>(
+    pub fn next<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         timeout: Option<f32>,
-    ) -> NatsrpyResult<Bound<'a, PyAny>> {
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let Some(inner) = self.inner.clone() else {
             return Err(NatsrpyError::NotInitialized);
         };
@@ -58,12 +46,7 @@ impl Subscription {
             };
 
             Python::attach(move |gil| -> NatsrpyResult<_> {
-                let data = PyBytes::new(gil, message.payload.as_ref()).unbind();
-                Ok(Message {
-                    subject: message.subject.to_string(),
-                    reply: message.reply.map(|subj| subj.to_string()),
-                    payload: data,
-                })
+                Ok(crate::message::Message::from_nats_message(gil, message)?)
             })
         };
 
@@ -76,7 +59,7 @@ impl Subscription {
         })
     }
 
-    pub fn __anext__<'a>(&self, py: Python<'a>) -> NatsrpyResult<Bound<'a, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         self.next(py, None)
     }
 }

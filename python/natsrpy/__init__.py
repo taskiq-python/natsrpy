@@ -1,9 +1,7 @@
 from natsrpy._inner import (
     Nats,
-    # JetStream,
-    # Source,
-    # External,
     Subscription,
+    Message,
 )
 
 __all__ = [

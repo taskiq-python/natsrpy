@@ -69,7 +69,7 @@ impl NatsCls {
             addr: addrs,
         })
     }
-    pub fn startup<'a>(&self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    pub fn startup<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let mut conn_opts = async_nats::ConnectOptions::new();
         if let Some((username, passwd)) = &self.user_and_pass {
             conn_opts = conn_opts.user_and_password(username.to_string(), passwd.to_string());
@@ -112,15 +112,15 @@ impl NatsCls {
     }
 
     #[pyo3(signature = (subject, payload, *, headers=None, reply=None, err_on_disconnect = false))]
-    pub fn publish<'a>(
+    pub fn publish<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         subject: String,
         payload: Bound<PyBytes>,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
-    ) -> PyResult<Bound<'a, PyAny>> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         let data = bytes::Bytes::copy_from_slice(payload.as_bytes());
         let headermap = headers
@@ -149,15 +149,15 @@ impl NatsCls {
     }
 
     #[pyo3(signature = (subject, payload, *, headers=None, inbox = None, timeout=None))]
-    pub fn request<'a>(
+    pub fn request<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         subject: String,
         payload: Option<Bound<PyBytes>>,
         headers: Option<Bound<PyDict>>,
         inbox: Option<String>,
         timeout: Option<f32>,
-    ) -> PyResult<Bound<'a, PyAny>> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         let data = payload.map(|inner| bytes::Bytes::from(inner.as_bytes().to_vec()));
         let headermap = headers
@@ -179,7 +179,7 @@ impl NatsCls {
         })?)
     }
 
-    pub fn drain<'a>(&self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    pub fn drain<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Draining NATS session");
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {
@@ -192,7 +192,7 @@ impl NatsCls {
         })?)
     }
 
-    pub fn subscribe<'a>(&self, py: Python<'a>, subject: String) -> PyResult<Bound<'a, PyAny>> {
+    pub fn subscribe<'py>(&self, py: Python<'py>, subject: String) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Subscribing to '{}'", subject);
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {
@@ -214,9 +214,9 @@ impl NatsCls {
         max_ack_inflight=None,
         backpressure_on_inflight=None,
     ))]
-    pub fn jetstream<'a>(
+    pub fn jetstream<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         domain: Option<String>,
         api_prefix: Option<String>,
         timeout: Option<f32>,
@@ -224,7 +224,7 @@ impl NatsCls {
         concurrency_limit: Option<usize>,
         max_ack_inflight: Option<usize>,
         backpressure_on_inflight: Option<bool>,
-    ) -> PyResult<Bound<'a, PyAny>> {
+    ) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Creating JetStream context");
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {
@@ -262,7 +262,7 @@ impl NatsCls {
         })?)
     }
 
-    pub fn close<'a>(&self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    pub fn close<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Closing nats session");
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {
@@ -276,7 +276,7 @@ impl NatsCls {
         })?)
     }
 
-    pub fn flush<'a>(&self, py: Python<'a>) -> PyResult<Bound<'a, PyAny>> {
+    pub fn flush<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Flushing streams");
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {

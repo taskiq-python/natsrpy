@@ -36,15 +36,15 @@ impl JetStream {
         reply=None,
         err_on_disconnect = false
     ))]
-    pub fn publish<'a>(
+    pub fn publish<'py>(
         &self,
-        py: Python<'a>,
+        py: Python<'py>,
         subject: String,
         payload: Bound<PyBytes>,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
-    ) -> NatsrpyResult<Bound<'a, PyAny>> {
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let data = bytes::Bytes::from(payload.as_bytes().to_vec());
         let headermap = headers
@@ -66,11 +66,11 @@ impl JetStream {
         })
     }
 
-    pub fn create_kv<'a>(
+    pub fn create_kv<'py>(
         &self,
-        py: Python<'a>,
-        config: Bound<'a, KVConfig>,
-    ) -> NatsrpyResult<Bound<'a, PyAny>> {
+        py: Python<'py>,
+        config: Bound<'py, KVConfig>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let config = config.borrow().deref().clone().try_into()?;
 
@@ -80,7 +80,7 @@ impl JetStream {
         })
     }
 
-    pub fn get_kv<'a>(&self, py: Python<'a>, bucket: String) -> NatsrpyResult<Bound<'a, PyAny>> {
+    pub fn get_kv<'py>(&self, py: Python<'py>, bucket: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         natsrpy_future(py, async move {
             let js = ctx.read().await;
@@ -88,16 +88,24 @@ impl JetStream {
         })
     }
 
-    pub fn update_kv<'a>(
+    pub fn update_kv<'py>(
         &self,
-        py: Python<'a>,
-        config: Bound<'a, KVConfig>,
-    ) -> NatsrpyResult<Bound<'a, PyAny>> {
+        py: Python<'py>,
+        config: Bound<'py, KVConfig>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let config = config.borrow().deref().clone().try_into()?;
         natsrpy_future(py, async move {
             let js = ctx.read().await;
             Ok(KeyValue::new(js.update_key_value(config).await?))
+        })
+    }
+
+    pub fn delete_kv<'py>(&self, py: Python<'py>, bucket: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.ctx.clone();
+        natsrpy_future(py, async move {
+            let js = ctx.read().await;
+            Ok(js.delete_key_value(bucket).await?.success)
         })
     }
 }

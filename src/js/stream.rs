@@ -3,22 +3,22 @@ use std::ops::Deref;
 use crate::exceptions::rust_err::NatsrpyError;
 use crate::exceptions::rust_err::NatsrpyResult;
 use pyo3::Bound;
-use pyo3::pymethods;
 use pyo3::pyclass;
-
+use pyo3::pymethods;
 
 #[pyclass(from_py_object)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub enum StorageType {
-    File,
-    Memory,
+    #[default]
+    FILE,
+    MEMORY,
 }
 
 impl From<StorageType> for async_nats::jetstream::stream::StorageType {
     fn from(value: StorageType) -> Self {
         match value {
-            StorageType::File => Self::File,
-            StorageType::Memory => Self::Memory,
+            StorageType::FILE => Self::File,
+            StorageType::MEMORY => Self::Memory,
         }
     }
 }
@@ -125,7 +125,7 @@ impl TryFrom<Source> for async_nats::jetstream::stream::Source {
 impl Source {
     #[new]
     #[pyo3(signature = (
-        name, 
+        name,
         filter_subject=None,
         external=None,
         start_sequence = None,
@@ -148,7 +148,10 @@ impl Source {
             start_time,
             start_sequence,
             filter_subject,
-            subject_transforms: subject_transforms.into_iter().map(|val| val.borrow().deref().clone()).collect(),
+            subject_transforms: subject_transforms
+                .into_iter()
+                .map(|val| val.borrow().deref().clone())
+                .collect(),
             external: external.map(|e| e.borrow().deref().clone()),
         })
     }
@@ -156,18 +159,19 @@ impl Source {
 
 #[pyclass(from_py_object, get_all, set_all)]
 #[derive(Clone)]
-pub struct Placement{
+pub struct Placement {
     pub cluster: Option<String>,
     pub tags: Vec<String>,
 }
 
-
 #[pymethods]
-impl Placement{
+impl Placement {
     #[new]
-    pub fn init(cluster: Option<String>, tags: Vec<String>) -> Self {
-        Self{
-            cluster, tags,
+    #[pyo3(signature=(cluster=None, tags=None))]
+    pub fn __new__(cluster: Option<String>, tags: Option<Vec<String>>) -> Self {
+        Self {
+            cluster,
+            tags: tags.unwrap_or_default(),
         }
     }
 }
@@ -179,4 +183,10 @@ impl From<Placement> for async_nats::jetstream::stream::Placement {
             tags: value.tags,
         }
     }
+}
+
+#[pyo3::pymodule(submodule, name = "stream")]
+pub mod pymod {
+    #[pymodule_export]
+    pub use super::{External, Placement, Republish, Source, StorageType, SubjectTransform};
 }

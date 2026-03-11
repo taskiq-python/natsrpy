@@ -1,3 +1,5 @@
+from natsrpy._inner.js import JetStream
+
 class Message:
     subject: str
     reply: str | None
