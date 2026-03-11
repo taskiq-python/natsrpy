@@ -6,6 +6,7 @@ use pyo3::{
 use crate::exceptions::rust_err::NatsrpyResult;
 
 #[pyo3::pyclass(get_all, set_all)]
+#[derive(Debug)]
 pub struct Message {
     pub subject: String,
     pub reply: Option<String>,
@@ -17,8 +18,8 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn from_nats_message<'py>(
-        py: Python<'py>,
+    pub fn from_nats_message(
+        py: Python<'_>,
         message: async_nats::Message,
     ) -> NatsrpyResult<Self> {
         let headers = PyDict::new(py);
@@ -26,14 +27,13 @@ impl Message {
             for (header_name, header_val) in headermap.iter() {
                 let py_val = header_val
                     .iter()
-                    .map(|val| val.to_string())
+                    .map(std::string::ToString::to_string)
                     .collect::<Vec<_>>();
                 if py_val.len() == 1 {
                     headers.set_item(header_name.to_string(), py_val.first())?;
                     continue;
-                } else {
-                    headers.set_item(header_name.to_string(), py_val)?;
                 }
+                headers.set_item(header_name.to_string(), py_val)?;
             }
         }
         Ok(Self {
@@ -50,20 +50,15 @@ impl Message {
 
 #[pyo3::pymethods]
 impl Message {
+    #[must_use] 
     pub fn __repr__(&self) -> String {
-        self.to_string()
-    }
-}
-
-impl ToString for Message {
-    fn to_string(&self) -> String {
         format!(
-            r#"Message<subject="{subject}", reply={reply}, payload={payload}, headers={headers}, description={description}, length={len}>"#,
+            r#"Message<subject="{subject}", reply={reply:?}, payload={payload}, headers={headers}, description={description:?}, length={len}>"#,
             subject = self.subject,
-            reply = format!("{:?}", self.reply),
-            payload = self.payload.to_string(),
-            headers = self.headers.to_string(),
-            description = format!("{:?}", self.description),
+            reply = self.reply,
+            payload = self.payload,
+            headers = self.headers,
+            description = self.description,
             len = self.length,
         )
     }

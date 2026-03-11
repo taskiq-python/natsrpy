@@ -14,6 +14,7 @@ pub struct Subscription {
 }
 
 impl Subscription {
+    #[must_use] 
     pub fn new(sub: async_nats::Subscriber) -> Self {
         Self {
             inner: Some(Arc::new(Mutex::new(sub))),
@@ -24,7 +25,7 @@ impl Subscription {
 #[pymethods]
 impl Subscription {
     #[must_use]
-    pub fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
+    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
         slf
     }
 
@@ -38,15 +39,14 @@ impl Subscription {
         };
 
         let future = async move {
-            let mut guard = inner.lock().await;
-            let Some(message) = guard.next().await else {
+            let Some(message) = inner.lock().await.next().await else {
                 return Err(NatsrpyError::from(PyStopAsyncIteration::new_err(
                     "End of the stream.",
                 )));
             };
 
             Python::attach(move |gil| -> NatsrpyResult<_> {
-                Ok(crate::message::Message::from_nats_message(gil, message)?)
+                crate::message::Message::from_nats_message(gil, message)
             })
         };
 

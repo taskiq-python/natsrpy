@@ -8,7 +8,6 @@ where
     T: for<'py> IntoPyObject<'py> + Send + 'static,
 {
     let res =
-        pyo3_async_runtimes::tokio::future_into_py(py, async { fut.await.map_err(Into::into) })
-            .map(Into::into)?;
+        pyo3_async_runtimes::tokio::future_into_py(py, async { fut.await.map_err(Into::into) })?;
     Ok(res)
 }

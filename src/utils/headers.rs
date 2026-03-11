@@ -18,6 +18,11 @@ impl NatsrpyHeadermapExt for async_nats::HeaderMap {
                 headermap.insert(rs_name, parsed_str);
                 continue;
             }
+            if let Ok(parsed_list) = val.extract::<Vec<String>>() {
+                for inner in parsed_list {
+                    headermap.append(rs_name.as_str(), inner);
+                }
+            }
             headermap.insert(rs_name, val.to_string());
         }
         Ok(headermap)

@@ -19,6 +19,7 @@ pub struct JetStream {
 }
 
 impl JetStream {
+    #[must_use]
     pub fn new(ctx: async_nats::jetstream::Context) -> Self {
         Self {
             ctx: Arc::new(RwLock::new(ctx)),
@@ -40,7 +41,7 @@ impl JetStream {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: Bound<PyBytes>,
+        payload: &Bound<PyBytes>,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
@@ -51,17 +52,20 @@ impl JetStream {
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
         natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            if err_on_disconnect && js.client().connection_state() == State::Disconnected {
+            if err_on_disconnect
+                && ctx.read().await.client().connection_state() == State::Disconnected
+            {
                 return Err(NatsrpyError::Disconnected);
             }
-            js.publish_message(async_nats::message::OutboundMessage {
-                subject: Subject::from(subject),
-                payload: data,
-                headers: headermap,
-                reply: reply.map(Subject::from),
-            })
-            .await?;
+            ctx.read()
+                .await
+                .publish_message(async_nats::message::OutboundMessage {
+                    subject: Subject::from(subject),
+                    payload: data,
+                    headers: headermap,
+                    reply: reply.map(Subject::from),
+                })
+                .await?;
             Ok(())
         })
     }
@@ -69,7 +73,7 @@ impl JetStream {
     pub fn create_kv<'py>(
         &self,
         py: Python<'py>,
-        config: Bound<'py, KVConfig>,
+        config: &Bound<'py, KVConfig>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let config = config.borrow().deref().clone().try_into()?;
@@ -91,7 +95,7 @@ impl JetStream {
     pub fn update_kv<'py>(
         &self,
         py: Python<'py>,
-        config: Bound<'py, KVConfig>,
+        config: &Bound<'py, KVConfig>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let config = config.borrow().deref().clone().try_into()?;

@@ -52,7 +52,8 @@ impl KVConfig {
         placement=None,
         limit_markers=None,
     ))]
-    pub fn __new__(
+    #[must_use]
+    pub const fn __new__(
         bucket: String,
         description: Option<String>,
         max_value_size: Option<i32>,
@@ -100,20 +101,23 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
             history: value.history.unwrap_or_default(),
             max_age: value
                 .max_age
-                .map(|val| std::time::Duration::from_secs_f32(val))
+                .map(std::time::Duration::from_secs_f32)
                 .unwrap_or_default(),
             max_bytes: value.max_bytes.unwrap_or_default(),
             storage: value.storage.unwrap_or_default().into(),
             num_replicas: value.num_replicas.unwrap_or_default(),
-            republish: value.republish.map(|r| r.into()),
-            mirror: value.mirror.map(|m| m.try_into()).transpose()?,
+            republish: value.republish.map(std::convert::Into::into),
+            mirror: value
+                .mirror
+                .map(std::convert::TryInto::try_into)
+                .transpose()?,
             sources: value
                 .sources
                 .map(|srcs| {
                     // Collect the results of trying to convert each source, and if any conversion
                     // fails, return the error
                     srcs.into_iter()
-                        .map(|s| s.try_into())
+                        .map(std::convert::TryInto::try_into)
                         .collect::<Result<Vec<_>, _>>()
                 })
                 // Now it's a Option<Result<_>>,
@@ -121,8 +125,8 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
                 .transpose()?,
             mirror_direct: value.mirror_direct.unwrap_or_default(),
             compression: value.compression.unwrap_or_default(),
-            placement: value.placement.map(|p| p.into()),
-            limit_markers: value.limit_markers.map(|val| Duration::from_secs_f32(val)),
+            placement: value.placement.map(std::convert::Into::into),
+            limit_markers: value.limit_markers.map(Duration::from_secs_f32),
         })
     }
 }
@@ -133,6 +137,7 @@ pub struct KeyValue {
 }
 
 impl KeyValue {
+    #[must_use]
     pub fn new(store: async_nats::jetstream::kv::Store) -> Self {
         Self {
             store: Arc::new(RwLock::new(store)),
@@ -145,13 +150,12 @@ impl KeyValue {
     pub fn get<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         natsrpy_future(py, async move {
-            let kv = store.read().await;
-            if let Some(data) = kv.get(key).await? {
-                let pybytes = Python::attach(move |gil| PyBytes::new(gil, &data).unbind());
-                Ok(Some(pybytes))
-            } else {
-                Ok(None)
-            }
+            Ok(store
+                .read()
+                .await
+                .get(key)
+                .await?
+                .map(|data| Python::attach(move |gil| PyBytes::new(gil, &data).unbind())))
         })
     }
 
@@ -159,13 +163,12 @@ impl KeyValue {
         &self,
         py: Python<'py>,
         key: String,
-        value: Bound<'py, PyBytes>,
+        value: &Bound<'py, PyBytes>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         let data = bytes::Bytes::copy_from_slice(value.as_bytes());
         natsrpy_future(py, async move {
-            let kv = store.read().await;
-            let status = kv.put(key, data).await?;
+            let status = store.read().await.put(key, data).await?;
             Ok(status)
         })
     }

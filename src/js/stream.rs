@@ -36,7 +36,7 @@ impl From<Republish> for async_nats::jetstream::stream::Republish {
         Self {
             source: value.source.clone(),
             destination: value.destination.clone(),
-            headers_only: value.headers_only.clone(),
+            headers_only: value.headers_only,
         }
     }
 }
@@ -52,10 +52,11 @@ pub struct External {
 impl External {
     #[new]
     #[pyo3(signature = (api_prefix, delivery_prefix=None))]
-    pub fn __new__(api_prefix: String, delivery_prefix: Option<String>) -> Self {
+    #[must_use] 
+    pub const fn __new__(api_prefix: String, delivery_prefix: Option<String>) -> Self {
         Self {
-            api_prefix: api_prefix,
-            delivery_prefix: delivery_prefix,
+            api_prefix,
+            delivery_prefix,
         }
     }
 }
@@ -104,18 +105,18 @@ impl TryFrom<Source> for async_nats::jetstream::stream::Source {
         Ok(Self {
             name: value.name.clone(),
             filter_subject: value.filter_subject.clone(),
-            external: value.external.as_ref().map(|e| e.into()),
+            external: value.external.as_ref().map(std::convert::Into::into),
             start_sequence: value.start_sequence,
             start_time: value
                 .start_time
-                .map(|val| time::OffsetDateTime::from_unix_timestamp(val))
+                .map(time::OffsetDateTime::from_unix_timestamp)
                 .transpose()?,
             domain: value.domain.clone(),
             subject_transforms: value
                 .subject_transforms
-                .clone()
+                
                 .into_iter()
-                .map(|val| val.into())
+                .map(std::convert::Into::into)
                 .collect(),
         })
     }
@@ -168,6 +169,7 @@ pub struct Placement {
 impl Placement {
     #[new]
     #[pyo3(signature=(cluster=None, tags=None))]
+    #[must_use] 
     pub fn __new__(cluster: Option<String>, tags: Option<Vec<String>>) -> Self {
         Self {
             cluster,
