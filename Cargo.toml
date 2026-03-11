@@ -5,7 +5,7 @@ edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
-name = "natsrpy"
+name = "_inner"
 crate-type = ["cdylib"]
 
 [dependencies]
@@ -17,4 +17,5 @@ pyo3 = { version = "0.28", features = ["abi3"] }
 pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"] }
 pyo3-log = "0.13.3"
 thiserror = "2.0.18"
+time = "0.3.47"
 tokio = { version = "1.50.0", features = ["full"] }

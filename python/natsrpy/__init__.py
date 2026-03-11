@@ -1,3 +1,12 @@
-from ._internal import Nats
+from natsrpy._inner import (
+    Nats,
+    # JetStream,
+    # Source,
+    # External,
+    Subscription,
+)
 
-__all__ = ["Nats"]
+__all__ = [
+    "Nats",
+    "Subscription",
+]

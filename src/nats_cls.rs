@@ -258,7 +258,7 @@ impl NatsCls {
             } else {
                 builder.build(session.clone())
             };
-            Ok(crate::jetstream::JetStream::new(js))
+            Ok(crate::js::jetstream::JetStream::new(js))
         })?)
     }
 

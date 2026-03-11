@@ -15,6 +15,10 @@ pub enum NatsrpyError {
     #[error("Connection is closed or lost.")]
     Disconnected,
     #[error(transparent)]
+    TimeRangeError(#[from] time::error::ComponentRange),
+    #[error("Cannot extract python type: {0}")]
+    ExtractError(String),
+    #[error(transparent)]
     Timeout(#[from] tokio::time::error::Elapsed),
     #[error(transparent)]
     JoinError(#[from] tokio::task::JoinError),
@@ -40,6 +44,8 @@ pub enum NatsrpyError {
     KVEntryError(#[from] async_nats::jetstream::kv::EntryError),
     #[error(transparent)]
     KVPutError(#[from] async_nats::jetstream::kv::PutError),
+    #[error(transparent)]
+    KVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {

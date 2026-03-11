@@ -536,6 +536,7 @@ dependencies = [
  "pyo3-async-runtimes",
  "pyo3-log",
  "thiserror 2.0.18",
+ "time",
  "tokio",
 ]
 

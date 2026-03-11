@@ -1,5 +1,3 @@
-from .jetstream import JetStream
-
 class Message:
     subject: str
     reply: str | None

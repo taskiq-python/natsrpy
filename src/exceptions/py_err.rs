@@ -10,8 +10,8 @@ create_exception!(
 create_exception!(natsrpy.exceptions, NatsrpySessionError, NatsrpyBaseError);
 create_exception!(natsrpy.exceptions, NatsrpyPublishError, NatsrpyBaseError);
 
-#[pymodule(name = "exceptions")]
-pub mod inner {
+#[pymodule(submodule, name = "exceptions")]
+pub mod pymod {
     #[pymodule_export]
-    use super::{NatsrpyBaseError, NatsrpySessionError};
+    use super::{NatsrpyBaseError, NatsrpyPublishError, NatsrpySessionError};
 }

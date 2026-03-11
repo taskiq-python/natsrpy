@@ -1,33 +1,30 @@
-use pyo3::prelude::*;
+use pyo3::{
+    Bound, PyResult,
+    types::{PyModule, PyModuleMethods},
+};
 
 pub mod exceptions;
-pub mod jetstream;
+pub mod js;
 pub mod nats_cls;
 pub mod subscription;
 pub mod utils;
 
 /// A Python module implemented in Rust.
-#[pymodule]
-mod _internal {
-    use pyo3::types::PyModule;
-    use pyo3::{Bound, PyResult};
+#[pyo3::pymodule]
+pub mod _inner {
+    use pyo3::{Bound, PyResult, types::PyModule};
+
+    use crate::utils::py::PyModuleExt;
 
     #[pymodule_export]
-    use crate::jetstream::pymod;
-
+    use super::nats_cls::NatsCls;
     #[pymodule_export]
-    use crate::nats_cls::NatsCls;
-
-    #[pymodule_export]
-    use crate::subscription::Subscription;
-
-    #[pymodule_export]
-    use crate::exceptions::py_err::inner;
+    use super::subscription::Subscription;
 
     #[pymodule_init]
-    fn init(_: &Bound<'_, PyModule>) -> PyResult<()> {
-        // Initialize logging interpop.
-        pyo3_log::init();
+    pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.attach_submodule_with_sys(m.py(), pyo3::wrap_pymodule!(super::exceptions::py_err::pymod))?;
+        m.attach_submodule_with_sys(m.py(), pyo3::wrap_pymodule!(super::js::pymod))?;
         Ok(())
     }
 }
