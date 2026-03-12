@@ -34,7 +34,7 @@ impl Subscription {
     pub fn next<'py>(
         &self,
         py: Python<'py>,
-        timeout: Option<f32>,
+        timeout: Option<Duration>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let Some(inner) = self.inner.clone() else {
             return Err(NatsrpyError::NotInitialized);
@@ -54,7 +54,7 @@ impl Subscription {
 
         natsrpy_future(py, async move {
             if let Some(timeout) = timeout {
-                tokio::time::timeout(Duration::from_secs_f32(timeout), future).await?
+                tokio::time::timeout(timeout, future).await?
             } else {
                 future.await
             }

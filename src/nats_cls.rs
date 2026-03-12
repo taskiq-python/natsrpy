@@ -23,8 +23,8 @@ pub struct NatsCls {
     read_buffer_capacity: u16,
     sender_capacity: usize,
     max_reconnects: Option<usize>,
-    connection_timeout: f32,
-    request_timeout: f32,
+    connection_timeout: Duration,
+    request_timeout: Option<Duration>,
 }
 
 #[pymethods]
@@ -40,8 +40,8 @@ impl NatsCls {
         read_buffer_capacity=65535,
         sender_capacity=128,
         max_reconnects=None,
-        connection_timeout=5.0,
-        request_timeout=10.0,
+        connection_timeout=Duration::from_secs(5),
+        request_timeout=Duration::from_secs(10),
     ))]
     fn __new__(
         addrs: Vec<String>,
@@ -52,8 +52,8 @@ impl NatsCls {
         read_buffer_capacity: u16,
         sender_capacity: usize,
         max_reconnects: Option<usize>,
-        connection_timeout: f32,
-        request_timeout: f32,
+        connection_timeout: Duration,
+        request_timeout: Option<Duration>,
     ) -> Self {
         Self {
             nats_session: Arc::new(RwLock::new(None)),
@@ -80,10 +80,8 @@ impl NatsCls {
         }
         conn_opts = conn_opts
             .max_reconnects(self.max_reconnects)
-            .connection_timeout(std::time::Duration::from_secs_f32(self.connection_timeout))
-            .request_timeout(Some(std::time::Duration::from_secs_f32(
-                self.request_timeout,
-            )))
+            .connection_timeout(self.connection_timeout)
+            .request_timeout(self.request_timeout)
             .read_buffer_capacity(self.read_buffer_capacity)
             .client_capacity(self.sender_capacity);
 
@@ -109,7 +107,7 @@ impl NatsCls {
             }
             Ok(())
         };
-        let timeout = Duration::from_secs_f32(self.connection_timeout);
+        let timeout = self.connection_timeout;
         return Ok(natsrpy_future(py, async move {
             tokio::time::timeout(timeout, startup_future).await?
         })?);
@@ -160,7 +158,7 @@ impl NatsCls {
         payload: Option<Bound<PyBytes>>,
         headers: Option<Bound<PyDict>>,
         inbox: Option<String>,
-        timeout: Option<f32>,
+        timeout: Option<Duration>,
     ) -> PyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         let data = payload.map(|inner| bytes::Bytes::from(inner.as_bytes().to_vec()));
@@ -173,7 +171,7 @@ impl NatsCls {
                     payload: data,
                     headers: headermap,
                     inbox,
-                    timeout: timeout.map(|t| Some(std::time::Duration::from_secs_f32(t))),
+                    timeout: timeout.map(|val| Some(val)),
                 };
                 session.send_request(subject, request).await?;
                 Ok(())
@@ -223,8 +221,8 @@ impl NatsCls {
         py: Python<'py>,
         domain: Option<String>,
         api_prefix: Option<String>,
-        timeout: Option<f32>,
-        ack_timeout: Option<f32>,
+        timeout: Option<Duration>,
+        ack_timeout: Option<Duration>,
         concurrency_limit: Option<usize>,
         max_ack_inflight: Option<usize>,
         backpressure_on_inflight: Option<bool>,
@@ -235,10 +233,10 @@ impl NatsCls {
             let mut builder =
                 async_nats::jetstream::ContextBuilder::new().concurrency_limit(concurrency_limit);
             if let Some(timeout) = ack_timeout {
-                builder = builder.ack_timeout(Duration::from_secs_f32(timeout));
+                builder = builder.ack_timeout(timeout);
             }
             if let Some(timeout) = timeout {
-                builder = builder.timeout(Duration::from_secs_f32(timeout));
+                builder = builder.timeout(timeout);
             }
             if let Some(max_ack_inflight) = max_ack_inflight {
                 builder = builder.max_ack_inflight(max_ack_inflight);

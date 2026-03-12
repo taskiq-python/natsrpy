@@ -19,7 +19,7 @@ pub struct KVConfig {
     description: Option<String>,
     max_value_size: Option<i32>,
     history: Option<i64>,
-    max_age: Option<f32>,
+    max_age: Option<Duration>,
     max_bytes: Option<i64>,
     storage: Option<js::stream::StorageType>,
     num_replicas: Option<usize>,
@@ -29,7 +29,7 @@ pub struct KVConfig {
     mirror_direct: Option<bool>,
     compression: Option<bool>,
     placement: Option<js::stream::Placement>,
-    limit_markers: Option<f32>,
+    limit_markers: Option<Duration>,
 }
 
 #[pymethods]
@@ -58,7 +58,7 @@ impl KVConfig {
         description: Option<String>,
         max_value_size: Option<i32>,
         history: Option<i64>,
-        max_age: Option<f32>,
+        max_age: Option<Duration>,
         max_bytes: Option<i64>,
         storage: Option<js::stream::StorageType>,
         num_replicas: Option<usize>,
@@ -68,7 +68,7 @@ impl KVConfig {
         mirror_direct: Option<bool>,
         compression: Option<bool>,
         placement: Option<js::stream::Placement>,
-        limit_markers: Option<f32>,
+        limit_markers: Option<Duration>,
     ) -> Self {
         Self {
             bucket,
@@ -101,7 +101,6 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
             history: value.history.unwrap_or_default(),
             max_age: value
                 .max_age
-                .map(std::time::Duration::from_secs_f32)
                 .unwrap_or_default(),
             max_bytes: value.max_bytes.unwrap_or_default(),
             storage: value.storage.unwrap_or_default().into(),
@@ -126,7 +125,7 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
             mirror_direct: value.mirror_direct.unwrap_or_default(),
             compression: value.compression.unwrap_or_default(),
             placement: value.placement.map(std::convert::Into::into),
-            limit_markers: value.limit_markers.map(Duration::from_secs_f32),
+            limit_markers: value.limit_markers,
         })
     }
 }
