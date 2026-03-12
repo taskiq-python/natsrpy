@@ -37,6 +37,8 @@ jobs:
           python-version: 3.x
       - name: Setting correct version
         run: |
+          ls
+          pwd
           python scripts/version_bumper.py "${{ github.ref_name }}" 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
