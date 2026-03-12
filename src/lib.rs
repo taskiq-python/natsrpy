@@ -42,6 +42,7 @@ pub mod _inner {
 
     #[pymodule_init]
     pub fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        pyo3_log::init();
         m.init_submodules()?;
         Ok(())
     }
