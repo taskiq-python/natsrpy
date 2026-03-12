@@ -1,5 +1,5 @@
 use pyo3::{
-    Bound,
+    Bound, Py, Python,
     types::{PyAnyMethods, PyDict},
 };
 
@@ -7,6 +7,7 @@ use crate::exceptions::rust_err::NatsrpyResult;
 
 pub trait NatsrpyHeadermapExt: Sized {
     fn from_pydict(pydict: Bound<PyDict>) -> NatsrpyResult<Self>;
+    fn to_pydict(&self, py: Python) -> NatsrpyResult<Py<PyDict>>;
 }
 
 impl NatsrpyHeadermapExt for async_nats::HeaderMap {
@@ -27,5 +28,24 @@ impl NatsrpyHeadermapExt for async_nats::HeaderMap {
             headermap.insert(rs_name, val.to_string());
         }
         Ok(headermap)
+    }
+
+    fn to_pydict(&self, py: Python) -> NatsrpyResult<Py<PyDict>> {
+        let dict = PyDict::new(py);
+        for (header_name, header_val) in self.iter() {
+            let py_val = header_val
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect::<Vec<_>>();
+            if py_val.is_empty() {
+                continue;
+            }
+            if py_val.len() == 1 {
+                dict.set_item(header_name.to_string(), py_val.first())?;
+                continue;
+            }
+            dict.set_item(header_name.to_string(), py_val)?;
+        }
+        Ok(dict.unbind())
     }
 }

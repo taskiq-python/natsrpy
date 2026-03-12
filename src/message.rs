@@ -3,7 +3,7 @@ use pyo3::{
     types::{PyAnyMethods, PyBytes, PyDict},
 };
 
-use crate::exceptions::rust_err::NatsrpyResult;
+use crate::{exceptions::rust_err::NatsrpyResult, utils::headers::NatsrpyHeadermapExt};
 
 #[pyo3::pyclass(get_all, set_all)]
 #[derive(Debug)]
@@ -18,29 +18,16 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn from_nats_message(
-        py: Python<'_>,
-        message: async_nats::Message,
-    ) -> NatsrpyResult<Self> {
-        let headers = PyDict::new(py);
-        if let Some(headermap) = message.headers {
-            for (header_name, header_val) in headermap.iter() {
-                let py_val = header_val
-                    .iter()
-                    .map(std::string::ToString::to_string)
-                    .collect::<Vec<_>>();
-                if py_val.len() == 1 {
-                    headers.set_item(header_name.to_string(), py_val.first())?;
-                    continue;
-                }
-                headers.set_item(header_name.to_string(), py_val)?;
-            }
-        }
+    pub fn from_nats_message(py: Python<'_>, message: async_nats::Message) -> NatsrpyResult<Self> {
+        let headers = match message.headers {
+            Some(headermap) => headermap.to_pydict(py)?,
+            None => PyDict::new(py).unbind(),
+        };
         Ok(Self {
             subject: message.subject.to_string(),
             reply: message.reply.as_deref().map(ToString::to_string),
             payload: PyBytes::new(py, &message.payload).unbind(),
-            headers: headers.unbind(),
+            headers: headers,
             status: message.status.map(Into::<u16>::into),
             description: message.description,
             length: message.length,
@@ -50,7 +37,7 @@ impl Message {
 
 #[pyo3::pymethods]
 impl Message {
-    #[must_use] 
+    #[must_use]
     pub fn __repr__(&self) -> String {
         format!(
             r#"Message<subject="{subject}", reply={reply:?}, payload={payload}, headers={headers}, description={description:?}, length={len}>"#,
