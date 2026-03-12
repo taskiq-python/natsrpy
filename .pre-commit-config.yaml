@@ -26,7 +26,7 @@ repos:
         name: ruff
         pass_filenames: false
         always_run: true
-        args: ["python", "--fix"]
+        args: ["check", "python", "--fix"]
   - repo: local
     hooks:
       - id: fmt
