@@ -1,6 +1,6 @@
 use pyo3::{
     Py, Python,
-    types::{PyAnyMethods, PyBytes, PyDict},
+    types::{PyBytes, PyDict},
 };
 
 use crate::{exceptions::rust_err::NatsrpyResult, utils::headers::NatsrpyHeadermapExt};
@@ -27,7 +27,7 @@ impl Message {
             subject: message.subject.to_string(),
             reply: message.reply.as_deref().map(ToString::to_string),
             payload: PyBytes::new(py, &message.payload).unbind(),
-            headers: headers,
+            headers,
             status: message.status.map(Into::<u16>::into),
             description: message.description,
             length: message.length,
