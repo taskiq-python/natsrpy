@@ -9,7 +9,10 @@ use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    js::kv::{KVConfig, KeyValue},
+    js::{
+        kv::{KVConfig, KeyValue},
+        stream::StreamConfig,
+    },
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 
@@ -117,15 +120,18 @@ impl JetStream {
         })
     }
 
-    pub fn get_consumer<'py>(
+    pub fn create_stream<'py>(
         &self,
         py: Python<'py>,
-        bucket: String,
+        config: StreamConfig,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         natsrpy_future(py, async move {
             let js = ctx.read().await;
-            Ok(KeyValue::new(js.get_key_value(bucket).await?))
+            Ok(super::stream::Stream::new(
+                js.create_stream(async_nats::jetstream::stream::Config::try_from(config)?)
+                    .await?,
+            ))
         })
     }
 }
