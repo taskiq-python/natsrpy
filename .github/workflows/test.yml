@@ -45,6 +45,6 @@ jobs:
           toolchain: stable
           components: clippy
           override: true
-      - uses: actions-rs/clippy-check@v1
+      - uses: auguwu/clippy-action@1.4.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+            token: ${{secrets.GITHUB_TOKEN}}
