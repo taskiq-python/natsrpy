@@ -1,8 +1,4 @@
-from natsrpy._inner import (
-    Nats,
-    Subscription,
-    Message,
-)
+from natsrpy._inner import Message, Nats, Subscription
 
 __all__ = [
     "Nats",

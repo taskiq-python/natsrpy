@@ -1,4 +1,4 @@
-from natsrpy._inner.js.stream import StorageType, Source, Placement, Republish
+from natsrpy._inner.js.stream import Placement, Republish, Source, StorageType
 
 class KVConfig:
     """

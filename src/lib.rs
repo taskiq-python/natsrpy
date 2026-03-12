@@ -9,13 +9,13 @@
 #![
     allow(
         // I don't care about this.
-        clippy::module_name_repetitions, 
+        clippy::module_name_repetitions,
         // Yo, the hell you should put
         // it in docs, if signature is clear as sky.
         clippy::missing_errors_doc,
         // Because pythonic way is
         // to have many args with defaults.
-        clippy::too_many_arguments    
+        clippy::too_many_arguments
 )]
 pub mod exceptions;
 pub mod js;

@@ -5,8 +5,10 @@ use std::{sync::Arc, time::Duration};
 use pyo3::{Bound, PyAny, PyRef, Python, pyclass, pymethods};
 use tokio::sync::Mutex;
 
-use crate::exceptions::rust_err::NatsrpyError;
-use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
+use crate::{
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    utils::natsrpy_future,
+};
 
 #[pyclass]
 pub struct Subscription {
@@ -14,7 +16,7 @@ pub struct Subscription {
 }
 
 impl Subscription {
-    #[must_use] 
+    #[must_use]
     pub fn new(sub: async_nats::Subscriber) -> Self {
         Self {
             inner: Some(Arc::new(Mutex::new(sub))),
