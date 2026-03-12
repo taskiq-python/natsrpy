@@ -1,10 +1,7 @@
 use std::ops::Deref;
 
-use crate::exceptions::rust_err::NatsrpyError;
-use crate::exceptions::rust_err::NatsrpyResult;
-use pyo3::Bound;
-use pyo3::pyclass;
-use pyo3::pymethods;
+use crate::exceptions::rust_err::{NatsrpyError, NatsrpyResult};
+use pyo3::{Bound, pyclass, pymethods};
 
 #[pyclass(from_py_object)]
 #[derive(Clone, Copy, Default)]
@@ -52,7 +49,7 @@ pub struct External {
 impl External {
     #[new]
     #[pyo3(signature = (api_prefix, delivery_prefix=None))]
-    #[must_use] 
+    #[must_use]
     pub const fn __new__(api_prefix: String, delivery_prefix: Option<String>) -> Self {
         Self {
             api_prefix,
@@ -114,7 +111,6 @@ impl TryFrom<Source> for async_nats::jetstream::stream::Source {
             domain: value.domain.clone(),
             subject_transforms: value
                 .subject_transforms
-                
                 .into_iter()
                 .map(std::convert::Into::into)
                 .collect(),
@@ -169,7 +165,7 @@ pub struct Placement {
 impl Placement {
     #[new]
     #[pyo3(signature=(cluster=None, tags=None))]
-    #[must_use] 
+    #[must_use]
     pub fn __new__(cluster: Option<String>, tags: Option<Vec<String>>) -> Self {
         Self {
             cluster,

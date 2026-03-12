@@ -1,5 +1,4 @@
-use pyo3::create_exception;
-use pyo3::pymodule;
+use pyo3::{create_exception, pymodule};
 
 create_exception!(
     natsrpy.exceptions,

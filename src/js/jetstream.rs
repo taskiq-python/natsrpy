@@ -1,17 +1,17 @@
-use std::ops::Deref;
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
-use async_nats::Subject;
-use async_nats::client::traits::Publisher;
-use async_nats::connection::State;
-use pyo3::types::{PyBytesMethods, PyDict};
-use pyo3::{Bound, PyAny, Python, pyclass, pymethods, types::PyBytes};
+use async_nats::{Subject, client::traits::Publisher, connection::State};
+use pyo3::{
+    Bound, PyAny, Python, pyclass, pymethods,
+    types::{PyBytes, PyBytesMethods, PyDict},
+};
 use tokio::sync::RwLock;
 
-use crate::exceptions::rust_err::NatsrpyError;
-use crate::js::kv::{KVConfig, KeyValue};
-use crate::utils::headers::NatsrpyHeadermapExt;
-use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
+use crate::{
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    js::kv::{KVConfig, KeyValue},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+};
 
 #[pyclass]
 pub struct JetStream {
