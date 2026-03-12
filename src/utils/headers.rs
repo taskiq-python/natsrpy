@@ -22,6 +22,7 @@ impl NatsrpyHeadermapExt for async_nats::HeaderMap {
                 for inner in parsed_list {
                     headermap.append(rs_name.as_str(), inner);
                 }
+                continue;
             }
             headermap.insert(rs_name, val.to_string());
         }
