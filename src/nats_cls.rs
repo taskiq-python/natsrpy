@@ -168,18 +168,18 @@ impl NatsCls {
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
         Ok(natsrpy_future(py, async move {
-            let session = session.read().await;
-            let Some(session) = session.as_ref() else {
-                return Err(NatsrpyError::NotInitialized);
-            };
-            let request = async_nats::Request {
-                payload: data,
-                headers: headermap,
-                inbox,
-                timeout: timeout.map(|t| Some(std::time::Duration::from_secs_f32(t))),
-            };
-            session.send_request(subject, request).await?;
-            Ok(())
+            if let Some(session) = session.read().await.as_ref() {
+                let request = async_nats::Request {
+                    payload: data,
+                    headers: headermap,
+                    inbox,
+                    timeout: timeout.map(|t| Some(std::time::Duration::from_secs_f32(t))),
+                };
+                session.send_request(subject, request).await?;
+                Ok(())
+            } else {
+                Err(NatsrpyError::NotInitialized)
+            }
         })?)
     }
 
