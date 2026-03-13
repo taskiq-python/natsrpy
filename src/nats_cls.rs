@@ -171,7 +171,7 @@ impl NatsCls {
                     payload: data,
                     headers: headermap,
                     inbox,
-                    timeout: timeout.map(|val| Some(val)),
+                    timeout: timeout.map(Some),
                 };
                 session.send_request(subject, request).await?;
                 Ok(())

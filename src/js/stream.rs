@@ -98,7 +98,7 @@ impl From<PersistenceMode> for async_nats::jetstream::stream::PersistenceMode {
 }
 
 #[pyclass(from_py_object)]
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ConsumerLimits {
     pub inactive_threshold: Duration,
     pub max_ack_pending: i64,
@@ -107,7 +107,8 @@ pub struct ConsumerLimits {
 #[pymethods]
 impl ConsumerLimits {
     #[new]
-    pub fn __new__(inactive_threshold: Duration, max_ack_pending: i64) -> Self {
+    #[must_use]
+    pub const fn __new__(inactive_threshold: Duration, max_ack_pending: i64) -> Self {
         Self {
             inactive_threshold,
             max_ack_pending,
@@ -135,7 +136,8 @@ pub struct Republish {
 #[pymethods]
 impl Republish {
     #[new]
-    pub fn __new__(source: String, destination: String, headers_only: bool) -> Self {
+    #[must_use]
+    pub const fn __new__(source: String, destination: String, headers_only: bool) -> Self {
         Self {
             source,
             destination,
@@ -387,7 +389,7 @@ impl StreamConfig {
         allow_message_schedules=None,
         allow_message_counter=None,
     ))]
-    pub fn __new__(
+    pub const fn __new__(
         name: String,
         subjects: Vec<String>,
         max_bytes: Option<i64>,
@@ -430,12 +432,12 @@ impl StreamConfig {
     ) -> NatsrpyResult<Self> {
         Ok(Self {
             name,
+            subjects,
             max_bytes,
             max_messages,
             max_messages_per_subject,
             discard,
             discard_new_per_subject,
-            subjects,
             retention,
             max_consumers,
             max_age,
@@ -523,9 +525,9 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
 
         // Values that require conversion between python -> rust types.
         conf.republish = value.republish.map(Into::into);
-        conf.storage = value.storage.map(Into::into).unwrap_or(conf.storage);
-        conf.retention = value.retention.map(Into::into).unwrap_or(conf.retention);
-        conf.discard = value.discard.map(Into::into).unwrap_or(conf.discard);
+        conf.storage = value.storage.map_or(conf.storage, Into::into);
+        conf.retention = value.retention.map_or(conf.retention, Into::into);
+        conf.discard = value.discard.map_or(conf.discard, Into::into);
         conf.mirror = value.mirror.map(TryInto::try_into).transpose()?;
         conf.sources = value
             .sources
@@ -543,7 +545,7 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
         conf.persist_mode = value.persist_mode.map(Into::into);
         conf.pause_until = value
             .pause_until
-            .map(|val| time::OffsetDateTime::from_unix_timestamp(val))
+            .map(time::OffsetDateTime::from_unix_timestamp)
             .transpose()?;
 
         Ok(conf)
@@ -576,7 +578,7 @@ impl StreamMessage {
             time.minute(),
             time.second(),
             time.microsecond(),
-            Some(tz_info.deref()),
+            Some(&*tz_info),
         )?;
         Ok(Self {
             subject: msg.subject.to_string(),
@@ -608,6 +610,7 @@ pub struct Stream {
     stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
 }
 impl Stream {
+    #[must_use]
     pub fn new(
         stream: async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
     ) -> Self {
