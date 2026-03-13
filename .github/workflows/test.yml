@@ -66,7 +66,6 @@ jobs:
         with:
           enable-cache: true
           version: "latest"
-          python-version: 3.x
       - id: prepare-container
         name: Prepare docker container
         run: docker compose up -d --wait
