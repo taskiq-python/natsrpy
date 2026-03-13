@@ -565,7 +565,7 @@ pub struct StreamMessage {
 impl StreamMessage {
     pub fn from_nats_message(
         py: Python,
-        msg: async_nats::jetstream::message::StreamMessage,
+        msg: &async_nats::jetstream::message::StreamMessage,
     ) -> NatsrpyResult<Self> {
         let time = msg.time.to_utc();
         let tz_info = PyTzInfo::utc(py)?;
@@ -630,7 +630,8 @@ impl Stream {
         let ctx = self.stream.clone();
         natsrpy_future(py, async move {
             let message = ctx.read().await.direct_get(sequence).await?;
-            let result = Python::attach(move |gil| StreamMessage::from_nats_message(gil, message))?;
+            let result =
+                Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
             Ok(result)
         })
     }

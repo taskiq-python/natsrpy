@@ -13,7 +13,7 @@ jobs:
           - mypy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -25,7 +25,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -39,7 +39,7 @@ jobs:
       checks: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -48,11 +48,10 @@ jobs:
       - uses: auguwu/clippy-action@1.4.0
         with:
           token: ${{secrets.GITHUB_TOKEN}}
-          deny: warnings
   pytest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -61,21 +60,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: 3.x
-      - id: setup-uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          enable-cache: true
-          version: "latest"
       - id: prepare-container
         name: Prepare docker container
         run: docker compose up -d --wait
       - id: setup-venv
         name: Setup virtualenv
-        run: uv venv
-      - name: Build wheels
+        run: python -m venv .venv
+      - name: Build lib
         uses: PyO3/maturin-action@v1
         with:
-          comand: dev --uv
+          command: dev
           sccache: true
       - name: Run pytest
         run: uv run pytest -vv -n auto python/tests

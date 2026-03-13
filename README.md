@@ -1,3 +1,6 @@
+[![PyPI](https://img.shields.io/pypi/v/natsrpy?style=for-the-badge)](https://pypi.org/project/scyllapy/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/natsrpy?style=for-the-badge)](https://pypistats.org/packages/scyllapy)
+
 # Nats client
 
 This is a client library for [NATS](https://nats.io) written in rust.

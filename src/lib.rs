@@ -1,4 +1,4 @@
-#![warn(
+#![deny(
     // Base lints.
     clippy::all,
     // Some pedantic lints.

@@ -39,7 +39,19 @@ repos:
         args:
           - fmt
 
-      - id: clippy
+      - id: clippy-fix
+        types:
+          - rust
+        name: fixing fixable clippy
+        language: system
+        pass_filenames: false
+        entry: cargo
+        args:
+          - clippy
+          - --fix
+          - --allow-dirty
+
+      - id: clippy-check
         types:
           - rust
         name: rust clippy
@@ -48,8 +60,6 @@ repos:
         entry: cargo
         args:
           - clippy
-          - --fix
-          - --allow-dirty
 
       - id: check
         types:
