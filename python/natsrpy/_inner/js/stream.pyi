@@ -2,25 +2,25 @@ from datetime import datetime, timedelta
 from typing import Any
 
 class StorageType:
-    FILE: "StorageType"
-    MEMORY: "StorageType"
+    FILE: StorageType
+    MEMORY: StorageType
 
 class DiscardPolicy:
-    OLD: "DiscardPolicy"
-    NEW: "DiscardPolicy"
+    OLD: DiscardPolicy
+    NEW: DiscardPolicy
 
 class RetentionPolicy:
-    LIMITS: "RetentionPolicy"
-    INTEREST: "RetentionPolicy"
-    WORKQUEUE: "RetentionPolicy"
+    LIMITS: RetentionPolicy
+    INTEREST: RetentionPolicy
+    WORKQUEUE: RetentionPolicy
 
 class Compression:
-    S2: "Compression"
-    NONE: "Compression"
+    S2: Compression
+    NONE: Compression
 
 class PersistenceMode:
-    Default: "PersistenceMode"
-    Async: "PersistenceMode"
+    Default: PersistenceMode
+    Async: PersistenceMode
 
 class ConsumerLimits:
     inactive_threshold: timedelta

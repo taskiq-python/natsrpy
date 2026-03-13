@@ -2,7 +2,7 @@
 name = "natsrpy"
 description = "Nats client library written in rust"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license-files = ["LICENSE"]
 classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
@@ -12,7 +12,11 @@ classifiers = [
 dynamic = ["version"]
 
 [dependency-groups]
-dev = ["pytest>=9,<10"]
+dev = [
+  "anyio>=4,<5",
+  "pytest>=9,<10",
+  "pytest-xdist>=3,<4",
+]
 
 [build-system]
 requires = ["maturin>=1.12,<2.0"]
@@ -23,3 +27,85 @@ bindings = "pyo3"
 features = ["pyo3/extension-module"]
 module-name = "natsrpy._inner"
 python-source = "python"
+
+[tool.pytest]
+anyio_mode = "auto"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+allow_untyped_calls = true
+packages = ["taskiq_nats"]
+pretty = true
+implicit_reexport = true
+allow_untyped_decorators = true
+warn_return_any = false
+
+[tool.ruff]
+target-version="py310"
+exclude = [".venv/"]
+line-length = 88
+
+[tool.ruff.lint]
+mccabe = { max-complexity = 10 }
+# List of enabled rulsets.
+# See https://docs.astral.sh/ruff/rules/ for more information.
+select = [
+    "E",   # Error
+    "F",   # Pyflakes
+    "W",   # Pycodestyle
+    "C90", # McCabe complexity
+    "I",   # Isort
+    "N",   # pep8-naming
+    "D",   # Pydocstyle
+    "ANN", # Pytype annotations
+    "S",   # Bandit
+    "B",   # Bugbear
+    "COM", # Commas
+    "C4",  # Comprehensions
+    "ISC", # Implicit string concat
+    "PIE", # Unnecessary code
+    "T20", # Catch prints
+    "PYI", # validate pyi files
+    "Q",   # Checks for quotes
+    "RSE", # Checks raise statements
+    "RET", # Checks return statements
+    "SLF", # Self checks
+    "SIM", # Simplificator
+    "PTH", # Pathlib checks
+    "ERA", # Checks for commented out code
+    "PL",  # PyLint checks
+    "RUF", # Specific to Ruff checks
+    "UP",  # Pyupgrade
+]
+ignore = [
+    "D105",    # Missing docstring in magic method
+    "D107",    # Missing docstring in __init__
+    "D212",    # Multi-line docstring summary should start at the first line
+    "D401",    # First line should be in imperative mood
+    "D104",    # Missing docstring in public package
+    "D100",    # Missing docstring in public module
+    "ANN401",  # typing.Any are disallowed in `**kwargs
+    "PLR0913", # Too many arguments for function call
+    "D106",    # Missing docstring in public nested class
+		"PYI021",  # Docstrings should not be included in stubs
+]
+
+[tool.ruff.lint.per-file-ignores]
+"python/tests/*" = [
+    "S101",   # Use of assert detected
+    "S301",   # Use of pickle detected
+    "D103",   # Missing docstring in public function
+    "SLF001", # Private member accessed
+    "S311",   # Standard pseudo-random generators are not suitable for security/cryptographic purposes
+    "D101",   # Missing docstring in public class
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+ignore-decorators = ["typing.overload"]
+
+[tool.ruff.lint.pylint]
+allow-magic-value-types = ["int", "str", "float"]

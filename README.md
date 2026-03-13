@@ -33,5 +33,3 @@ For lints please use `pre-commit`.
 ```bash
 pre-commit run -a
 ```
-
-For tests we use pytest.

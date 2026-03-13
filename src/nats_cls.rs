@@ -265,7 +265,7 @@ impl NatsCls {
         })?)
     }
 
-    pub fn close<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    pub fn shutdown<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         log::debug!("Closing nats session");
         let session = self.nats_session.clone();
         Ok(natsrpy_future(py, async move {
@@ -300,7 +300,7 @@ impl Drop for NatsCls {
             let mut write_guard = self.nats_session.write().await;
             if let Some(session) = write_guard.as_ref() {
                 log::warn!(
-                    "NATS session was not closed before dropping. Draining session in drop. Please call `.close()` function before dropping the session to avoid this warning."
+                    "NATS session was not closed before dropping. Draining session in drop. Please call `.shutdown()` function before dropping the session to avoid this warning."
                 );
                 session.drain().await.ok();
             }
