@@ -1,15 +1,18 @@
 [project]
 name = "natsrpy"
-requires-python = ">=3.8"
-license-files = ["LICENSE"]
 description = "Nats client library written in rust"
 readme = "README.md"
+requires-python = ">=3.8"
+license-files = ["LICENSE"]
 classifiers = [
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
   "Programming Language :: Rust",
 ]
 dynamic = ["version"]
+
+[dependency-groups]
+dev = ["pytest>=9,<10"]
 
 [build-system]
 requires = ["maturin>=1.12,<2.0"]
