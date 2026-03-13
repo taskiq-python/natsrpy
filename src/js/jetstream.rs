@@ -134,4 +134,16 @@ impl JetStream {
             ))
         })
     }
+
+    pub fn get_stream<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.ctx.clone();
+        natsrpy_future(py, async move {
+            let js = ctx.read().await;
+            Ok(super::stream::Stream::new(js.get_stream(name).await?))
+        })
+    }
 }

@@ -99,9 +99,7 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
             description: value.description.unwrap_or_default(),
             max_value_size: value.max_value_size.unwrap_or_default(),
             history: value.history.unwrap_or_default(),
-            max_age: value
-                .max_age
-                .unwrap_or_default(),
+            max_age: value.max_age.unwrap_or_default(),
             max_bytes: value.max_bytes.unwrap_or_default(),
             storage: value.storage.unwrap_or_default().into(),
             num_replicas: value.num_replicas.unwrap_or_default(),
@@ -130,15 +128,32 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct KeyValue {
+    #[pyo3(get)]
+    name: String,
+    #[pyo3(get)]
+    stream_name: String,
+    #[pyo3(get)]
+    prefix: String,
+    #[pyo3(get)]
+    put_prefix: Option<String>,
+    #[pyo3(get)]
+    use_jetstream_prefix: bool,
     store: Arc<RwLock<async_nats::jetstream::kv::Store>>,
 }
 
 impl KeyValue {
     #[must_use]
     pub fn new(store: async_nats::jetstream::kv::Store) -> Self {
+        // store.
         Self {
+            name: store.name.clone(),
+            stream_name: store.stream_name.clone(),
+            prefix: store.prefix.clone(),
+            put_prefix: store.put_prefix.clone(),
+            use_jetstream_prefix: store.use_jetstream_prefix,
             store: Arc::new(RwLock::new(store)),
         }
     }

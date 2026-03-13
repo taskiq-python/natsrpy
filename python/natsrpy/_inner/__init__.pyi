@@ -1,3 +1,5 @@
+from datetime import timedelta
+from typing import Tuple
 from natsrpy._inner.js import JetStream
 from natsrpy._inner.message import Message
 
@@ -10,15 +12,15 @@ class Nats:
         self,
         /,
         addrs: list[str] = ["nats://localhost:4222"],
-        user_and_pass=None,
-        nkey=None,
-        token=None,
-        custom_inbox_prefix=None,
-        read_buffer_capacity=65535,
-        sender_capacity=128,
-        max_reconnects=None,
-        connection_timeout=5.0,
-        request_timeout=10.0,
+        user_and_pass: Tuple[str, str] | None = None,
+        nkey: str | None = None,
+        token: str | None = None,
+        custom_inbox_prefix: str | None = None,
+        read_buffer_capacity: int = 65535,
+        sender_capacity: int = 128,
+        max_reconnects: int | None = None,
+        connection_timeout: timedelta = timedelta(seconds=5),
+        request_timeout: timedelta = timedelta(seconds=10),
     ) -> None: ...
     async def startup(self) -> None: ...
     async def publish(

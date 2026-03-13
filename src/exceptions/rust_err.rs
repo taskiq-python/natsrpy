@@ -50,6 +50,10 @@ pub enum NatsrpyError {
     DeleteError(#[from] async_nats::jetstream::kv::DeleteError),
     #[error(transparent)]
     CreateStreamError(#[from] async_nats::jetstream::context::CreateStreamError),
+    #[error(transparent)]
+    GetStreamError(#[from] async_nats::jetstream::context::GetStreamError),
+    #[error(transparent)]
+    StreamDirectGetError(#[from] async_nats::jetstream::stream::DirectGetError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {
