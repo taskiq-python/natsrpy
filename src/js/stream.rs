@@ -1,12 +1,15 @@
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    sync::{Arc, RwLock},
-    time::Duration,
+use pyo3::{
+    Py,
+    types::{PyBytes, PyDateTime, PyTzInfo},
 };
+use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
+use tokio::sync::RwLock;
 
-use crate::exceptions::rust_err::{NatsrpyError, NatsrpyResult};
-use pyo3::{Bound, pyclass, pymethods};
+use crate::{
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+};
+use pyo3::{Bound, PyAny, Python, pyclass, pymethods, types::PyDict};
 
 #[pyclass(from_py_object)]
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
@@ -95,7 +98,7 @@ impl From<PersistenceMode> for async_nats::jetstream::stream::PersistenceMode {
 }
 
 #[pyclass(from_py_object)]
-#[derive(Clone, Debug, PartialEq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ConsumerLimits {
     pub inactive_threshold: Duration,
     pub max_ack_pending: i64,
@@ -104,7 +107,8 @@ pub struct ConsumerLimits {
 #[pymethods]
 impl ConsumerLimits {
     #[new]
-    pub fn __new__(inactive_threshold: Duration, max_ack_pending: i64) -> Self {
+    #[must_use]
+    pub const fn __new__(inactive_threshold: Duration, max_ack_pending: i64) -> Self {
         Self {
             inactive_threshold,
             max_ack_pending,
@@ -132,7 +136,8 @@ pub struct Republish {
 #[pymethods]
 impl Republish {
     #[new]
-    pub fn __new__(source: String, destination: String, headers_only: bool) -> Self {
+    #[must_use]
+    pub const fn __new__(source: String, destination: String, headers_only: bool) -> Self {
         Self {
             source,
             destination,
@@ -384,7 +389,7 @@ impl StreamConfig {
         allow_message_schedules=None,
         allow_message_counter=None,
     ))]
-    pub fn __new__(
+    pub const fn __new__(
         name: String,
         subjects: Vec<String>,
         max_bytes: Option<i64>,
@@ -427,12 +432,12 @@ impl StreamConfig {
     ) -> NatsrpyResult<Self> {
         Ok(Self {
             name,
+            subjects,
             max_bytes,
             max_messages,
             max_messages_per_subject,
             discard,
             discard_new_per_subject,
-            subjects,
             retention,
             max_consumers,
             max_age,
@@ -520,9 +525,9 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
 
         // Values that require conversion between python -> rust types.
         conf.republish = value.republish.map(Into::into);
-        conf.storage = value.storage.map(Into::into).unwrap_or(conf.storage);
-        conf.retention = value.retention.map(Into::into).unwrap_or(conf.retention);
-        conf.discard = value.discard.map(Into::into).unwrap_or(conf.discard);
+        conf.storage = value.storage.map_or(conf.storage, Into::into);
+        conf.retention = value.retention.map_or(conf.retention, Into::into);
+        conf.discard = value.discard.map_or(conf.discard, Into::into);
         conf.mirror = value.mirror.map(TryInto::try_into).transpose()?;
         conf.sources = value
             .sources
@@ -540,10 +545,62 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
         conf.persist_mode = value.persist_mode.map(Into::into);
         conf.pause_until = value
             .pause_until
-            .map(|val| time::OffsetDateTime::from_unix_timestamp(val))
+            .map(time::OffsetDateTime::from_unix_timestamp)
             .transpose()?;
 
         Ok(conf)
+    }
+}
+
+#[pyclass(get_all)]
+#[derive(Debug)]
+pub struct StreamMessage {
+    pub subject: String,
+    pub sequence: u64,
+    pub headers: Py<PyDict>,
+    pub payload: Py<PyBytes>,
+    pub time: Py<PyDateTime>,
+}
+
+impl StreamMessage {
+    pub fn from_nats_message(
+        py: Python,
+        msg: &async_nats::jetstream::message::StreamMessage,
+    ) -> NatsrpyResult<Self> {
+        let time = msg.time.to_utc();
+        let tz_info = PyTzInfo::utc(py)?;
+        let time = PyDateTime::new(
+            py,
+            time.year(),
+            time.month().into(),
+            time.day(),
+            time.hour(),
+            time.minute(),
+            time.second(),
+            time.microsecond(),
+            Some(&*tz_info),
+        )?;
+        Ok(Self {
+            subject: msg.subject.to_string(),
+            payload: PyBytes::new(py, &msg.payload).unbind(),
+            headers: msg.headers.to_pydict(py)?,
+            sequence: msg.sequence,
+            time: time.unbind(),
+        })
+    }
+}
+
+#[pymethods]
+impl StreamMessage {
+    #[must_use]
+    pub fn __repr__(&self) -> String {
+        format!(
+            r#"StreamMessage<subject="{subject}", sequence={sequence}, payload={payload}, headers={headers}>"#,
+            subject = self.subject,
+            sequence = self.sequence,
+            payload = self.payload,
+            headers = self.headers,
+        )
     }
 }
 
@@ -553,6 +610,7 @@ pub struct Stream {
     stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
 }
 impl Stream {
+    #[must_use]
     pub fn new(
         stream: async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
     ) -> Self {
@@ -562,11 +620,29 @@ impl Stream {
     }
 }
 
+#[pymethods]
+impl Stream {
+    pub fn direct_get<'py>(
+        &self,
+        py: Python<'py>,
+        sequence: u64,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            let message = ctx.read().await.direct_get(sequence).await?;
+            let result =
+                Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
+            Ok(result)
+        })
+    }
+}
+
 #[pyo3::pymodule(submodule, name = "stream")]
 pub mod pymod {
     #[pymodule_export]
     pub use super::{
         Compression, ConsumerLimits, DiscardPolicy, External, PersistenceMode, Placement,
-        Republish, RetentionPolicy, Source, StorageType, Stream, StreamConfig, SubjectTransform,
+        Republish, RetentionPolicy, Source, StorageType, Stream, StreamConfig, StreamMessage,
+        SubjectTransform,
     };
 }

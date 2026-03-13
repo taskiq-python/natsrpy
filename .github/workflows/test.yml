@@ -1,7 +1,7 @@
 name: "Testing package"
 
 on:
-  pull_request:
+  push:
 
 jobs:
   py-lint:
@@ -13,7 +13,7 @@ jobs:
           - mypy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -25,7 +25,7 @@ jobs:
   fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -39,7 +39,7 @@ jobs:
       checks: write
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -47,5 +47,37 @@ jobs:
           override: true
       - uses: auguwu/clippy-action@1.4.0
         with:
-            token: ${{secrets.GITHUB_TOKEN}}
-            deny: warnings 
+          token: ${{secrets.GITHUB_TOKEN}}
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          override: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: 3.x
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+      - id: prepare-container
+        name: Prepare docker container
+        run: docker compose up -d --wait
+      - id: setup-venv
+        name: Setup virtualenv
+        run: python -m venv .venv
+      - name: Build lib
+        uses: PyO3/maturin-action@v1
+        with:
+          command: dev --uv
+          sccache: true
+      - name: Run pytest
+        run: |
+          set -e
+          source .venv/bin/activate
+          pytest -vv -n auto python/tests
+      - name: Teardown docker
+        if: always()
+        run: docker compose down

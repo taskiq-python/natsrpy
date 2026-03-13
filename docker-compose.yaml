@@ -1,0 +1,15 @@
+services:
+  nats:
+    image: nats:2.12.5-alpine
+    command: -m 8222 --jetstream
+    healthcheck:
+      test:
+        - CMD
+        - "sh"
+        - "-c"
+        - "wget http://localhost:8222/healthz -q -O - | xargs | grep ok || exit 1"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    ports:
+      - 4222:4222
