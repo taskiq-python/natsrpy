@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use async_nats::{Subject, client::traits::Publisher, connection::State};
 use pyo3::{
-    Bound, PyAny, Python, pyclass, pymethods,
+    Bound, PyAny, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use tokio::sync::RwLock;
@@ -16,7 +16,7 @@ use crate::{
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 
-#[pyclass]
+#[pyo3::pyclass]
 pub struct JetStream {
     ctx: Arc<RwLock<async_nats::jetstream::Context>>,
 }
@@ -30,7 +30,7 @@ impl JetStream {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl JetStream {
     #[pyo3(signature = (
         subject,
@@ -120,6 +120,18 @@ impl JetStream {
         })
     }
 
+    pub fn get_stream<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.ctx.clone();
+        natsrpy_future(py, async move {
+            let js = ctx.read().await;
+            Ok(super::stream::Stream::new(js.get_stream(name).await?))
+        })
+    }
+
     pub fn create_stream<'py>(
         &self,
         py: Python<'py>,
@@ -135,7 +147,7 @@ impl JetStream {
         })
     }
 
-    pub fn get_stream<'py>(
+    pub fn delete_stream<'py>(
         &self,
         py: Python<'py>,
         name: String,
@@ -143,7 +155,7 @@ impl JetStream {
         let ctx = self.ctx.clone();
         natsrpy_future(py, async move {
             let js = ctx.read().await;
-            Ok(super::stream::Stream::new(js.get_stream(name).await?))
+            Ok(js.delete_stream(name).await?.success)
         })
     }
 }

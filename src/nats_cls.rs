@@ -1,6 +1,6 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
 use pyo3::{
-    Bound, PyAny, PyResult, Python, pyclass, pymethods,
+    Bound, PyAny, PyResult, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use std::{sync::Arc, time::Duration};
@@ -12,7 +12,7 @@ use crate::{
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 
-#[pyclass(name = "Nats")]
+#[pyo3::pyclass(name = "Nats")]
 pub struct NatsCls {
     nats_session: Arc<tokio::sync::RwLock<Option<async_nats::Client>>>,
     addr: Vec<String>,
@@ -27,7 +27,7 @@ pub struct NatsCls {
     request_timeout: Option<Duration>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl NatsCls {
     #[new]
     #[pyo3(signature = (

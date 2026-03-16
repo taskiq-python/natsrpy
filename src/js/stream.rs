@@ -1,18 +1,19 @@
 use pyo3::{
     Py,
-    types::{PyBytes, PyDateTime, PyTzInfo},
+    types::{PyBytes, PyDateTime, PyDict, PyTzInfo},
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
-use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    utils::headers::NatsrpyHeadermapExt,
+    utils::natsrpy_future,
 };
-use pyo3::{Bound, PyAny, Python, pyclass, pymethods, types::PyDict};
+use pyo3::{Bound, PyAny, Python};
+use tokio::sync::RwLock;
 
-#[pyclass(from_py_object)]
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum StorageType {
     #[default]
     FILE,
@@ -28,8 +29,17 @@ impl From<StorageType> for async_nats::jetstream::stream::StorageType {
     }
 }
 
-#[pyclass(from_py_object)]
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+impl From<async_nats::jetstream::stream::StorageType> for StorageType {
+    fn from(value: async_nats::jetstream::stream::StorageType) -> Self {
+        match value {
+            async_nats::jetstream::stream::StorageType::File => Self::FILE,
+            async_nats::jetstream::stream::StorageType::Memory => Self::MEMORY,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum DiscardPolicy {
     #[default]
     OLD,
@@ -45,8 +55,17 @@ impl From<DiscardPolicy> for async_nats::jetstream::stream::DiscardPolicy {
     }
 }
 
-#[pyclass(from_py_object)]
-#[derive(Clone, Copy, Default, PartialEq, Eq)]
+impl From<async_nats::jetstream::stream::DiscardPolicy> for DiscardPolicy {
+    fn from(value: async_nats::jetstream::stream::DiscardPolicy) -> Self {
+        match value {
+            async_nats::jetstream::stream::DiscardPolicy::Old => Self::OLD,
+            async_nats::jetstream::stream::DiscardPolicy::New => Self::NEW,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum RetentionPolicy {
     #[default]
     LIMITS,
@@ -64,8 +83,18 @@ impl From<RetentionPolicy> for async_nats::jetstream::stream::RetentionPolicy {
     }
 }
 
-#[pyclass(from_py_object)]
-#[derive(Clone, Copy, PartialEq, Eq)]
+impl From<async_nats::jetstream::stream::RetentionPolicy> for RetentionPolicy {
+    fn from(value: async_nats::jetstream::stream::RetentionPolicy) -> Self {
+        match value {
+            async_nats::jetstream::stream::RetentionPolicy::Limits => Self::LIMITS,
+            async_nats::jetstream::stream::RetentionPolicy::Interest => Self::INTEREST,
+            async_nats::jetstream::stream::RetentionPolicy::WorkQueue => Self::WORKQUEUE,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Compression {
     S2,
     NONE,
@@ -80,8 +109,17 @@ impl From<Compression> for async_nats::jetstream::stream::Compression {
     }
 }
 
-#[pyclass(from_py_object)]
-#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+impl From<async_nats::jetstream::stream::Compression> for Compression {
+    fn from(value: async_nats::jetstream::stream::Compression) -> Self {
+        match value {
+            async_nats::jetstream::stream::Compression::S2 => Self::S2,
+            async_nats::jetstream::stream::Compression::None => Self::NONE,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum PersistenceMode {
     #[default]
     Default,
@@ -97,14 +135,23 @@ impl From<PersistenceMode> for async_nats::jetstream::stream::PersistenceMode {
     }
 }
 
-#[pyclass(from_py_object)]
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+impl From<async_nats::jetstream::stream::PersistenceMode> for PersistenceMode {
+    fn from(value: async_nats::jetstream::stream::PersistenceMode) -> Self {
+        match value {
+            async_nats::jetstream::stream::PersistenceMode::Default => Self::Default,
+            async_nats::jetstream::stream::PersistenceMode::Async => Self::Async,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ConsumerLimits {
     pub inactive_threshold: Duration,
     pub max_ack_pending: i64,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl ConsumerLimits {
     #[new]
     #[must_use]
@@ -125,15 +172,24 @@ impl From<ConsumerLimits> for async_nats::jetstream::stream::ConsumerLimits {
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+impl From<async_nats::jetstream::stream::ConsumerLimits> for ConsumerLimits {
+    fn from(value: async_nats::jetstream::stream::ConsumerLimits) -> Self {
+        Self {
+            inactive_threshold: value.inactive_threshold,
+            max_ack_pending: value.max_ack_pending,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct Republish {
     pub source: String,
     pub destination: String,
     pub headers_only: bool,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl Republish {
     #[new]
     #[must_use]
@@ -156,14 +212,24 @@ impl From<Republish> for async_nats::jetstream::stream::Republish {
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+impl From<async_nats::jetstream::stream::Republish> for Republish {
+    fn from(value: async_nats::jetstream::stream::Republish) -> Self {
+        Self {
+            source: value.source,
+            destination: value.destination,
+            headers_only: value.headers_only,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct External {
     pub api_prefix: String,
     pub delivery_prefix: Option<String>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl External {
     #[new]
     #[pyo3(signature = (api_prefix, delivery_prefix=None))]
@@ -185,8 +251,17 @@ impl From<&External> for async_nats::jetstream::stream::External {
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+impl From<async_nats::jetstream::stream::External> for External {
+    fn from(value: async_nats::jetstream::stream::External) -> Self {
+        Self {
+            api_prefix: value.api_prefix,
+            delivery_prefix: value.delivery_prefix,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct SubjectTransform {
     pub source: String,
     pub destination: String,
@@ -201,8 +276,17 @@ impl From<SubjectTransform> for async_nats::jetstream::stream::SubjectTransform 
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+impl From<async_nats::jetstream::stream::SubjectTransform> for SubjectTransform {
+    fn from(value: async_nats::jetstream::stream::SubjectTransform) -> Self {
+        Self {
+            source: value.source,
+            destination: value.destination,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct Source {
     pub name: String,
     pub filter_subject: Option<String>,
@@ -236,7 +320,25 @@ impl TryFrom<Source> for async_nats::jetstream::stream::Source {
     }
 }
 
-#[pymethods]
+impl From<async_nats::jetstream::stream::Source> for Source {
+    fn from(value: async_nats::jetstream::stream::Source) -> Self {
+        Self {
+            name: value.name,
+            filter_subject: value.filter_subject,
+            external: value.external.map(std::convert::Into::into),
+            start_sequence: value.start_sequence,
+            start_time: value.start_time.map(time::OffsetDateTime::unix_timestamp),
+            domain: value.domain,
+            subject_transforms: value
+                .subject_transforms
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
+#[pyo3::pymethods]
 impl Source {
     #[new]
     #[pyo3(signature = (
@@ -272,14 +374,14 @@ impl Source {
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct Placement {
     pub cluster: Option<String>,
     pub tags: Vec<String>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl Placement {
     #[new]
     #[pyo3(signature=(cluster=None, tags=None))]
@@ -301,8 +403,95 @@ impl From<Placement> for async_nats::jetstream::stream::Placement {
     }
 }
 
-#[pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone)]
+impl From<async_nats::jetstream::stream::Placement> for Placement {
+    fn from(value: async_nats::jetstream::stream::Placement) -> Self {
+        Self {
+            cluster: value.cluster,
+            tags: value.tags,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct PeerInfo {
+    pub name: String,
+    pub current: bool,
+    pub active: Duration,
+    pub offline: bool,
+    pub lag: Option<u64>,
+}
+
+impl From<PeerInfo> for async_nats::jetstream::stream::PeerInfo {
+    fn from(value: PeerInfo) -> Self {
+        Self {
+            name: value.name,
+            current: value.current,
+            active: value.active,
+            offline: value.offline,
+            lag: value.lag,
+        }
+    }
+}
+
+impl From<async_nats::jetstream::stream::PeerInfo> for PeerInfo {
+    fn from(value: async_nats::jetstream::stream::PeerInfo) -> Self {
+        Self {
+            name: value.name,
+            current: value.current,
+            active: value.active,
+            offline: value.offline,
+            lag: value.lag,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct ClusterInfo {
+    pub name: Option<String>,
+    pub raft_group: Option<String>,
+    pub leader: Option<String>,
+    pub leader_since: Option<i64>,
+    pub system_account: bool,
+    pub traffic_account: Option<String>,
+    pub replicas: Vec<PeerInfo>,
+}
+
+impl TryFrom<ClusterInfo> for async_nats::jetstream::stream::ClusterInfo {
+    type Error = NatsrpyError;
+    fn try_from(value: ClusterInfo) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name,
+            raft_group: value.raft_group,
+            leader: value.leader,
+            leader_since: value
+                .leader_since
+                .map(time::OffsetDateTime::from_unix_timestamp)
+                .transpose()?,
+            system_account: value.system_account,
+            traffic_account: value.traffic_account,
+            replicas: value.replicas.into_iter().map(Into::into).collect(),
+        })
+    }
+}
+
+impl From<async_nats::jetstream::stream::ClusterInfo> for ClusterInfo {
+    fn from(value: async_nats::jetstream::stream::ClusterInfo) -> Self {
+        Self {
+            name: value.name,
+            raft_group: value.raft_group,
+            leader: value.leader,
+            leader_since: value.leader_since.map(time::OffsetDateTime::unix_timestamp),
+            system_account: value.system_account,
+            traffic_account: value.traffic_account,
+            replicas: value.replicas.into_iter().map(Into::into).collect(),
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct StreamConfig {
     pub name: String,
     pub subjects: Vec<String>,
@@ -345,7 +534,7 @@ pub struct StreamConfig {
     pub allow_message_counter: Option<bool>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl StreamConfig {
     #[new]
     #[pyo3(signature=(
@@ -474,6 +663,56 @@ impl StreamConfig {
     }
 }
 
+impl TryFrom<async_nats::jetstream::stream::Config> for StreamConfig {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::jetstream::stream::Config) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name,
+            subjects: value.subjects,
+            max_bytes: Some(value.max_bytes),
+            max_messages: Some(value.max_messages),
+            max_messages_per_subject: Some(value.max_messages_per_subject),
+            discard: Some(value.discard.into()),
+            discard_new_per_subject: Some(value.discard_new_per_subject),
+            retention: Some(value.retention.into()),
+            max_consumers: Some(value.max_consumers),
+            max_age: Some(value.max_age),
+            max_message_size: Some(value.max_message_size),
+            storage: Some(value.storage.into()),
+            num_replicas: Some(value.num_replicas),
+            no_ack: Some(value.no_ack),
+            duplicate_window: Some(value.duplicate_window),
+            template_owner: Some(value.template_owner),
+            sealed: Some(value.sealed),
+            description: value.description,
+            allow_rollup: Some(value.allow_rollup),
+            deny_delete: Some(value.deny_delete),
+            deny_purge: Some(value.deny_purge),
+            republish: value.republish.map(Into::into),
+            allow_direct: Some(value.allow_direct),
+            mirror_direct: Some(value.mirror_direct),
+            mirror: value.mirror.map(Into::into),
+            sources: value
+                .sources
+                .map(|val| val.into_iter().map(Into::into).collect()),
+            metadata: Some(value.metadata),
+            subject_transform: value.subject_transform.map(Into::into),
+            compression: value.compression.map(Into::into),
+            consumer_limits: value.consumer_limits.map(Into::into),
+            first_sequence: value.first_sequence,
+            placement: value.placement.map(Into::into),
+            persist_mode: value.persist_mode.map(Into::into),
+            pause_until: value.pause_until.map(time::OffsetDateTime::unix_timestamp),
+            allow_message_ttl: Some(value.allow_message_ttl),
+            subject_delete_marker_ttl: value.subject_delete_marker_ttl,
+            allow_atomic_publish: Some(value.allow_atomic_publish),
+            allow_message_schedules: Some(value.allow_message_schedules),
+            allow_message_counter: Some(value.allow_message_counter),
+        })
+    }
+}
+
 impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
     type Error = NatsrpyError;
 
@@ -552,7 +791,7 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
     }
 }
 
-#[pyclass(get_all)]
+#[pyo3::pyclass(get_all)]
 #[derive(Debug)]
 pub struct StreamMessage {
     pub subject: String,
@@ -590,7 +829,7 @@ impl StreamMessage {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl StreamMessage {
     #[must_use]
     pub fn __repr__(&self) -> String {
@@ -604,7 +843,92 @@ impl StreamMessage {
     }
 }
 
-#[pyclass(from_py_object)]
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct StreamState {
+    pub messages: u64,
+    pub bytes: u64,
+    pub first_sequence: u64,
+    pub first_timestamp: i64,
+    pub last_sequence: u64,
+    pub last_timestamp: i64,
+    pub consumer_count: usize,
+    pub subjects_count: u64,
+    pub deleted_count: Option<u64>,
+    pub deleted: Option<Vec<u64>>,
+}
+
+impl From<async_nats::jetstream::stream::State> for StreamState {
+    fn from(value: async_nats::jetstream::stream::State) -> Self {
+        Self {
+            messages: value.messages,
+            bytes: value.bytes,
+            first_sequence: value.first_sequence,
+            first_timestamp: value.first_timestamp.unix_timestamp(),
+            last_sequence: value.last_sequence,
+            last_timestamp: value.last_timestamp.unix_timestamp(),
+            consumer_count: value.consumer_count,
+            subjects_count: value.subjects_count,
+            deleted_count: value.deleted_count,
+            deleted: value.deleted,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct SourceInfo {
+    pub name: String,
+    pub lag: u64,
+    pub active: Option<std::time::Duration>,
+    pub filter_subject: Option<String>,
+    pub subject_transform_dest: Option<String>,
+    pub subject_transforms: Vec<SubjectTransform>,
+}
+
+impl From<async_nats::jetstream::stream::SourceInfo> for SourceInfo {
+    fn from(value: async_nats::jetstream::stream::SourceInfo) -> Self {
+        Self {
+            name: value.name,
+            lag: value.lag,
+            active: value.active,
+            filter_subject: value.filter_subject,
+            subject_transform_dest: value.subject_transform_dest,
+            subject_transforms: value
+                .subject_transforms
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Debug, Clone)]
+pub struct StreamInfo {
+    pub config: StreamConfig,
+    pub created: time::OffsetDateTime,
+    pub state: StreamState,
+    pub cluster: Option<ClusterInfo>,
+    pub mirror: Option<SourceInfo>,
+    pub sources: Vec<SourceInfo>,
+}
+
+impl TryFrom<async_nats::jetstream::stream::Info> for StreamInfo {
+    type Error = NatsrpyError;
+    fn try_from(value: async_nats::jetstream::stream::Info) -> Result<Self, Self::Error> {
+        Ok(Self {
+            config: value.config.try_into()?,
+            created: value.created,
+            state: value.state.into(),
+            cluster: value.cluster.map(Into::into),
+            mirror: value.mirror.map(Into::into),
+            sources: value.sources.into_iter().map(Into::into).collect(),
+        })
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct Stream {
     stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
@@ -620,7 +944,7 @@ impl Stream {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl Stream {
     pub fn direct_get<'py>(
         &self,
@@ -635,14 +959,21 @@ impl Stream {
             Ok(result)
         })
     }
+
+    pub fn get_info<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            StreamInfo::try_from(ctx.read().await.get_info().await?)
+        })
+    }
 }
 
 #[pyo3::pymodule(submodule, name = "stream")]
 pub mod pymod {
     #[pymodule_export]
     pub use super::{
-        Compression, ConsumerLimits, DiscardPolicy, External, PersistenceMode, Placement,
-        Republish, RetentionPolicy, Source, StorageType, Stream, StreamConfig, StreamMessage,
-        SubjectTransform,
+        ClusterInfo, Compression, ConsumerLimits, DiscardPolicy, External, PeerInfo,
+        PersistenceMode, Placement, Republish, RetentionPolicy, Source, SourceInfo, StorageType,
+        Stream, StreamConfig, StreamInfo, StreamMessage, StreamState, SubjectTransform,
     };
 }

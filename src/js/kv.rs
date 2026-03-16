@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use crate::js;
 use pyo3::{
-    Bound, PyAny, Python, pyclass, pymethods,
+    Bound, PyAny, Python,
     types::{PyBytes, PyBytesMethods},
 };
 use tokio::sync::RwLock;
@@ -12,7 +12,7 @@ use crate::{
     utils::natsrpy_future,
 };
 
-#[pyclass(from_py_object, get_all, set_all)]
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
 #[derive(Clone)]
 pub struct KVConfig {
     bucket: String,
@@ -32,7 +32,7 @@ pub struct KVConfig {
     limit_markers: Option<Duration>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl KVConfig {
     #[new]
     #[pyo3(signature=(
@@ -128,7 +128,7 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
     }
 }
 
-#[pyclass(from_py_object)]
+#[pyo3::pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct KeyValue {
     #[pyo3(get)]
@@ -159,7 +159,7 @@ impl KeyValue {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl KeyValue {
     pub fn get<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();

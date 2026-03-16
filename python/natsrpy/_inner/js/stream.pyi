@@ -181,6 +181,50 @@ class StreamMessage:
     payload: bytes
     time: datetime
 
+class StreamState:
+    messages: int
+    bytes: int
+    first_sequence: int
+    first_timestamp: int
+    last_sequence: int
+    last_timestamp: int
+    consumer_count: int
+    subjects_count: int
+    deleted_count: int | None
+    deleted: list[int] | None
+
+class SourceInfo:
+    name: str
+    lag: int
+    active: timedelta | None
+    filter_subject: str | None
+    subject_transform_dest: str | None
+    subject_transforms: list[SubjectTransform]
+
+class PeerInfo:
+    name: str
+    current: bool
+    active: timedelta
+    offline: bool
+    lag: int | None
+
+class ClusterInfo:
+    name: str | None
+    raft_group: str | None
+    leader: str | None
+    leader_since: int | None
+    system_account: bool
+    traffic_account: str | None
+    replicas: list[PeerInfo]
+
+class StreamInfo:
+    config: StreamConfig
+    created: float
+    state: StreamState
+    cluster: ClusterInfo | None
+    mirror: SourceInfo | None
+    sources: list[SourceInfo]
+
 class Stream:
     async def direct_get(self, sequence: int) -> StreamMessage:
         """

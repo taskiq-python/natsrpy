@@ -13,6 +13,11 @@ from natsrpy._inner.js.stream import (
     StreamConfig,
     StreamMessage,
     SubjectTransform,
+    ClusterInfo,
+    PeerInfo,
+    SourceInfo,
+    StreamInfo,
+    StreamState,
 )
 
 __all__ = [
@@ -30,4 +35,16 @@ __all__ = [
     "StreamConfig",
     "StreamMessage",
     "SubjectTransform",
+    "ClusterInfo",
+    "Compression",
+    "ConsumerLimits",
+    "DiscardPolicy",
+    "Stream",
+    "PeerInfo",
+    "PersistenceMode",
+    "RetentionPolicy",
+    "SourceInfo",
+    "StreamConfig",
+    "StreamInfo",
+    "StreamState",
 ]

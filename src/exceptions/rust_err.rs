@@ -54,6 +54,8 @@ pub enum NatsrpyError {
     GetStreamError(#[from] async_nats::jetstream::context::GetStreamError),
     #[error(transparent)]
     StreamDirectGetError(#[from] async_nats::jetstream::stream::DirectGetError),
+    #[error(transparent)]
+    StreamInfoError(#[from] async_nats::jetstream::stream::InfoError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {
