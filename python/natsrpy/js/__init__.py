@@ -1,4 +1,4 @@
-from natsrpy._inner.js import JetStream
+from natsrpy._natsrpy_rs.js import JetStream
 from natsrpy.js.kv import KeyValue, KVConfig
 from natsrpy.js.stream import (
     Compression,

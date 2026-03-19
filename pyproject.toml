@@ -33,7 +33,7 @@ build-backend = "maturin"
 [tool.maturin]
 bindings = "pyo3"
 features = ["pyo3/extension-module"]
-module-name = "natsrpy._inner"
+module-name = "natsrpy._natsrpy_rs"
 python-source = "python"
 
 [tool.mypy]

@@ -25,7 +25,7 @@ pub mod subscription;
 pub mod utils;
 
 #[pyo3::pymodule]
-pub mod _inner {
+pub mod _natsrpy_rs {
     use pyo3::{Bound, PyResult, types::PyModule};
 
     use crate::utils::py::PyModuleSubmoduleExt;

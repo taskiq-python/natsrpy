@@ -1,4 +1,4 @@
-from natsrpy._inner.js.kv import KeyValue, KVConfig
+from natsrpy._natsrpy_rs.js.kv import KeyValue, KVConfig
 
 __all__ = [
     "KVConfig",

@@ -42,14 +42,10 @@ impl Subscription {
 
         let future = async move {
             let Some(message) = inner.lock().await.next().await else {
-                return Err(NatsrpyError::from(PyStopAsyncIteration::new_err(
-                    "End of the stream.",
-                )));
+                return Err(PyStopAsyncIteration::new_err("End of the stream.").into());
             };
 
-            Python::attach(move |gil| -> NatsrpyResult<_> {
-                crate::message::Message::from_nats_message(gil, message)
-            })
+            crate::message::Message::try_from(message)
         };
 
         natsrpy_future(py, async move {

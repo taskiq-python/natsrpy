@@ -11,7 +11,7 @@ publish = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 crate-type = ["cdylib"]
-name = "_inner"
+name = "_natsrpy_rs"
 
 [dependencies]
 async-nats = "0.46"

@@ -1,5 +1,5 @@
-from natsrpy._inner.js.kv import KeyValue, KVConfig
-from natsrpy._inner.js.stream import Stream, StreamConfig
+from natsrpy._natsrpy_rs.js.kv import KeyValue, KVConfig
+from natsrpy._natsrpy_rs.js.stream import Stream, StreamConfig
 
 class JetStream:
     async def publish(

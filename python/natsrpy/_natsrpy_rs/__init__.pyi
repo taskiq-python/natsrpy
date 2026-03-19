@@ -1,8 +1,8 @@
 from datetime import timedelta
 from typing import Any
 
-from natsrpy._inner.js import JetStream
-from natsrpy._inner.message import Message
+from natsrpy._natsrpy_rs.js import JetStream
+from natsrpy._natsrpy_rs.message import Message
 
 class Subscription:
     def __aiter__(self) -> Subscription: ...

@@ -56,6 +56,14 @@ pub enum NatsrpyError {
     StreamDirectGetError(#[from] async_nats::jetstream::stream::DirectGetError),
     #[error(transparent)]
     StreamInfoError(#[from] async_nats::jetstream::stream::InfoError),
+    #[error(transparent)]
+    StreamPurgeError(#[from] async_nats::jetstream::stream::PurgeError),
+    #[error(transparent)]
+    UnknownError(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
+    #[error(transparent)]
+    PullMessageError(#[from] async_nats::jetstream::consumer::pull::MessagesError),
+    #[error(transparent)]
+    PullConsumerError(#[from] async_nats::jetstream::stream::ConsumerError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {

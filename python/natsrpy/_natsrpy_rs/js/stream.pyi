@@ -228,8 +228,31 @@ class StreamInfo:
 class Stream:
     async def direct_get(self, sequence: int) -> StreamMessage:
         """
-        Get direct message from a stream.
+        Get direct message from the stream.
 
-        Please note, that this method will throw an error
-        in case of stream being configured without `allow_direct=True`.
+        :param sequence: sequence number of the message to get.
+        :return: Message.
+        """
+
+    async def get_info(self) -> StreamInfo:
+        """
+        Get information about the stream.
+
+        :return: Stream info.
+        """
+
+    async def purge(
+        self,
+        filter: str | None = None,
+        sequence: int | None = None,
+        keep: int | None = None,
+    ) -> int:
+        """
+        Purge current stream.
+
+        :param filter: filter of subjects to purge, defaults to None
+        :param sequence: Message sequence to purge up to (inclusive), defaults to None
+        :param keep: Message count to keep starting from the end of the stream,
+            defaults to None
+        :return: number of messages purged
         """

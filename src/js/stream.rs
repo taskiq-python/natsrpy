@@ -6,8 +6,8 @@ use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::headers::NatsrpyHeadermapExt,
-    utils::natsrpy_future,
+    js::consumers::{self},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 use pyo3::{Bound, PyAny, Python};
 use tokio::sync::RwLock;
@@ -94,8 +94,9 @@ impl From<async_nats::jetstream::stream::RetentionPolicy> for RetentionPolicy {
 }
 
 #[pyo3::pyclass(from_py_object)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Compression {
+    #[default]
     S2,
     NONE,
 }
@@ -491,35 +492,35 @@ impl From<async_nats::jetstream::stream::ClusterInfo> for ClusterInfo {
 }
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct StreamConfig {
     pub name: String,
     pub subjects: Vec<String>,
-    pub max_bytes: Option<i64>,
-    pub max_messages: Option<i64>,
-    pub max_messages_per_subject: Option<i64>,
-    pub discard: Option<DiscardPolicy>,
-    pub discard_new_per_subject: Option<bool>,
-    pub retention: Option<RetentionPolicy>,
-    pub max_consumers: Option<i32>,
-    pub max_age: Option<Duration>,
-    pub max_message_size: Option<i32>,
-    pub storage: Option<StorageType>,
-    pub num_replicas: Option<usize>,
-    pub no_ack: Option<bool>,
-    pub duplicate_window: Option<Duration>,
-    pub template_owner: Option<String>,
-    pub sealed: Option<bool>,
+    pub max_bytes: i64,
+    pub max_messages: i64,
+    pub max_messages_per_subject: i64,
+    pub discard: DiscardPolicy,
+    pub discard_new_per_subject: bool,
+    pub retention: RetentionPolicy,
+    pub max_consumers: i32,
+    pub max_age: Duration,
+    pub max_message_size: i32,
+    pub storage: StorageType,
+    pub num_replicas: usize,
+    pub no_ack: bool,
+    pub duplicate_window: Duration,
+    pub template_owner: String,
+    pub sealed: bool,
     pub description: Option<String>,
-    pub allow_rollup: Option<bool>,
-    pub deny_delete: Option<bool>,
-    pub deny_purge: Option<bool>,
+    pub allow_rollup: bool,
+    pub deny_delete: bool,
+    pub deny_purge: bool,
     pub republish: Option<Republish>,
-    pub allow_direct: Option<bool>,
-    pub mirror_direct: Option<bool>,
+    pub allow_direct: bool,
+    pub mirror_direct: bool,
     pub mirror: Option<Source>,
     pub sources: Option<Vec<Source>>,
-    pub metadata: Option<HashMap<String, String>>,
+    pub metadata: HashMap<String, String>,
     pub subject_transform: Option<SubjectTransform>,
     pub compression: Option<Compression>,
     pub consumer_limits: Option<ConsumerLimits>,
@@ -527,11 +528,11 @@ pub struct StreamConfig {
     pub placement: Option<Placement>,
     pub persist_mode: Option<PersistenceMode>,
     pub pause_until: Option<i64>,
-    pub allow_message_ttl: Option<bool>,
+    pub allow_message_ttl: bool,
     pub subject_delete_marker_ttl: Option<Duration>,
-    pub allow_atomic_publish: Option<bool>,
-    pub allow_message_schedules: Option<bool>,
-    pub allow_message_counter: Option<bool>,
+    pub allow_atomic_publish: bool,
+    pub allow_message_schedules: bool,
+    pub allow_message_counter: bool,
 }
 
 #[pyo3::pymethods]
@@ -578,7 +579,7 @@ impl StreamConfig {
         allow_message_schedules=None,
         allow_message_counter=None,
     ))]
-    pub const fn __new__(
+    pub fn __new__(
         name: String,
         subjects: Vec<String>,
         max_bytes: Option<i64>,
@@ -619,34 +620,13 @@ impl StreamConfig {
         allow_message_schedules: Option<bool>,
         allow_message_counter: Option<bool>,
     ) -> NatsrpyResult<Self> {
-        Ok(Self {
+        let mut config = Self {
             name,
             subjects,
-            max_bytes,
-            max_messages,
-            max_messages_per_subject,
-            discard,
-            discard_new_per_subject,
-            retention,
-            max_consumers,
-            max_age,
-            max_message_size,
-            storage,
-            num_replicas,
-            no_ack,
-            duplicate_window,
-            template_owner,
-            sealed,
             description,
-            allow_rollup,
-            deny_delete,
-            deny_purge,
             republish,
-            allow_direct,
-            mirror_direct,
             mirror,
             sources,
-            metadata,
             subject_transform,
             compression,
             consumer_limits,
@@ -654,12 +634,41 @@ impl StreamConfig {
             placement,
             persist_mode,
             pause_until,
-            allow_message_ttl,
             subject_delete_marker_ttl,
-            allow_atomic_publish,
-            allow_message_schedules,
-            allow_message_counter,
-        })
+            ..Default::default()
+        };
+
+        config.max_bytes = max_bytes.unwrap_or(config.max_bytes);
+        config.max_messages = max_messages.unwrap_or(config.max_messages);
+        config.max_messages_per_subject =
+            max_messages_per_subject.unwrap_or(config.max_messages_per_subject);
+        config.discard = discard.unwrap_or(config.discard);
+        config.discard_new_per_subject =
+            discard_new_per_subject.unwrap_or(config.discard_new_per_subject);
+        config.retention = retention.unwrap_or(config.retention);
+        config.max_consumers = max_consumers.unwrap_or(config.max_consumers);
+        config.max_age = max_age.unwrap_or(config.max_age);
+        config.max_message_size = max_message_size.unwrap_or(config.max_message_size);
+        config.storage = storage.unwrap_or(config.storage);
+        config.num_replicas = num_replicas.unwrap_or(config.num_replicas);
+        config.no_ack = no_ack.unwrap_or(config.no_ack);
+        config.duplicate_window = duplicate_window.unwrap_or(config.duplicate_window);
+        config.template_owner = template_owner.unwrap_or(config.template_owner);
+        config.sealed = sealed.unwrap_or(config.sealed);
+        config.allow_rollup = allow_rollup.unwrap_or(config.allow_rollup);
+        config.deny_delete = deny_delete.unwrap_or(config.deny_delete);
+        config.deny_purge = deny_purge.unwrap_or(config.deny_purge);
+        config.allow_direct = allow_direct.unwrap_or(config.allow_direct);
+        config.mirror_direct = mirror_direct.unwrap_or(config.mirror_direct);
+        config.metadata = metadata.unwrap_or(config.metadata);
+        config.allow_message_ttl = allow_message_ttl.unwrap_or(config.allow_message_ttl);
+        config.allow_atomic_publish = allow_atomic_publish.unwrap_or(config.allow_atomic_publish);
+        config.allow_message_schedules =
+            allow_message_schedules.unwrap_or(config.allow_message_schedules);
+        config.allow_message_counter =
+            allow_message_counter.unwrap_or(config.allow_message_counter);
+
+        Ok(config)
     }
 }
 
@@ -670,33 +679,33 @@ impl TryFrom<async_nats::jetstream::stream::Config> for StreamConfig {
         Ok(Self {
             name: value.name,
             subjects: value.subjects,
-            max_bytes: Some(value.max_bytes),
-            max_messages: Some(value.max_messages),
-            max_messages_per_subject: Some(value.max_messages_per_subject),
-            discard: Some(value.discard.into()),
-            discard_new_per_subject: Some(value.discard_new_per_subject),
-            retention: Some(value.retention.into()),
-            max_consumers: Some(value.max_consumers),
-            max_age: Some(value.max_age),
-            max_message_size: Some(value.max_message_size),
-            storage: Some(value.storage.into()),
-            num_replicas: Some(value.num_replicas),
-            no_ack: Some(value.no_ack),
-            duplicate_window: Some(value.duplicate_window),
-            template_owner: Some(value.template_owner),
-            sealed: Some(value.sealed),
+            max_bytes: value.max_bytes,
+            max_messages: value.max_messages,
+            max_messages_per_subject: value.max_messages_per_subject,
+            discard: value.discard.into(),
+            discard_new_per_subject: value.discard_new_per_subject,
+            retention: value.retention.into(),
+            max_consumers: value.max_consumers,
+            max_age: value.max_age,
+            max_message_size: value.max_message_size,
+            storage: value.storage.into(),
+            num_replicas: value.num_replicas,
+            no_ack: value.no_ack,
+            duplicate_window: value.duplicate_window,
+            template_owner: value.template_owner,
+            sealed: value.sealed,
             description: value.description,
-            allow_rollup: Some(value.allow_rollup),
-            deny_delete: Some(value.deny_delete),
-            deny_purge: Some(value.deny_purge),
+            allow_rollup: value.allow_rollup,
+            deny_delete: value.deny_delete,
+            deny_purge: value.deny_purge,
             republish: value.republish.map(Into::into),
-            allow_direct: Some(value.allow_direct),
-            mirror_direct: Some(value.mirror_direct),
+            allow_direct: value.allow_direct,
+            mirror_direct: value.mirror_direct,
             mirror: value.mirror.map(Into::into),
             sources: value
                 .sources
                 .map(|val| val.into_iter().map(Into::into).collect()),
-            metadata: Some(value.metadata),
+            metadata: value.metadata,
             subject_transform: value.subject_transform.map(Into::into),
             compression: value.compression.map(Into::into),
             consumer_limits: value.consumer_limits.map(Into::into),
@@ -704,11 +713,11 @@ impl TryFrom<async_nats::jetstream::stream::Config> for StreamConfig {
             placement: value.placement.map(Into::into),
             persist_mode: value.persist_mode.map(Into::into),
             pause_until: value.pause_until.map(time::OffsetDateTime::unix_timestamp),
-            allow_message_ttl: Some(value.allow_message_ttl),
+            allow_message_ttl: value.allow_message_ttl,
             subject_delete_marker_ttl: value.subject_delete_marker_ttl,
-            allow_atomic_publish: Some(value.allow_atomic_publish),
-            allow_message_schedules: Some(value.allow_message_schedules),
-            allow_message_counter: Some(value.allow_message_counter),
+            allow_atomic_publish: value.allow_atomic_publish,
+            allow_message_schedules: value.allow_message_schedules,
+            allow_message_counter: value.allow_message_counter,
         })
     }
 }
@@ -729,44 +738,34 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
         // Optional values that have defaults.
         // If the value is not present, we just use the one
         // that nats' config defaults to.
-        conf.max_bytes = value.max_bytes.unwrap_or(conf.max_bytes);
-        conf.max_messages = value.max_messages.unwrap_or(conf.max_messages);
-        conf.max_messages_per_subject = value
-            .max_messages_per_subject
-            .unwrap_or(conf.max_messages_per_subject);
-        conf.discard_new_per_subject = value
-            .discard_new_per_subject
-            .unwrap_or(conf.discard_new_per_subject);
-        conf.max_consumers = value.max_consumers.unwrap_or(conf.max_consumers);
-        conf.max_age = value.max_age.unwrap_or(conf.max_age);
-        conf.max_message_size = value.max_message_size.unwrap_or(conf.max_message_size);
-        conf.num_replicas = value.num_replicas.unwrap_or(conf.num_replicas);
-        conf.no_ack = value.no_ack.unwrap_or(conf.no_ack);
-        conf.duplicate_window = value.duplicate_window.unwrap_or(conf.duplicate_window);
-        conf.template_owner = value.template_owner.unwrap_or(conf.template_owner);
-        conf.sealed = value.sealed.unwrap_or(conf.sealed);
-        conf.allow_rollup = value.allow_rollup.unwrap_or(conf.allow_rollup);
-        conf.deny_delete = value.deny_delete.unwrap_or(conf.deny_delete);
-        conf.deny_purge = value.deny_purge.unwrap_or(conf.deny_purge);
-        conf.allow_direct = value.allow_direct.unwrap_or(conf.allow_direct);
-        conf.mirror_direct = value.mirror_direct.unwrap_or(conf.mirror_direct);
-        conf.metadata = value.metadata.unwrap_or(conf.metadata);
-        conf.allow_message_ttl = value.allow_message_ttl.unwrap_or(conf.allow_message_ttl);
-        conf.allow_atomic_publish = value
-            .allow_atomic_publish
-            .unwrap_or(conf.allow_atomic_publish);
-        conf.allow_message_schedules = value
-            .allow_message_schedules
-            .unwrap_or(conf.allow_message_schedules);
-        conf.allow_message_counter = value
-            .allow_message_counter
-            .unwrap_or(conf.allow_message_counter);
+        conf.max_bytes = value.max_bytes;
+        conf.max_messages = value.max_messages;
+        conf.max_messages_per_subject = value.max_messages_per_subject;
+        conf.discard_new_per_subject = value.discard_new_per_subject;
+        conf.max_consumers = value.max_consumers;
+        conf.max_age = value.max_age;
+        conf.max_message_size = value.max_message_size;
+        conf.num_replicas = value.num_replicas;
+        conf.no_ack = value.no_ack;
+        conf.duplicate_window = value.duplicate_window;
+        conf.template_owner = value.template_owner;
+        conf.sealed = value.sealed;
+        conf.allow_rollup = value.allow_rollup;
+        conf.deny_delete = value.deny_delete;
+        conf.deny_purge = value.deny_purge;
+        conf.allow_direct = value.allow_direct;
+        conf.mirror_direct = value.mirror_direct;
+        conf.metadata = value.metadata;
+        conf.allow_message_ttl = value.allow_message_ttl;
+        conf.allow_atomic_publish = value.allow_atomic_publish;
+        conf.allow_message_schedules = value.allow_message_schedules;
+        conf.allow_message_counter = value.allow_message_counter;
 
         // Values that require conversion between python -> rust types.
         conf.republish = value.republish.map(Into::into);
-        conf.storage = value.storage.map_or(conf.storage, Into::into);
-        conf.retention = value.retention.map_or(conf.retention, Into::into);
-        conf.discard = value.discard.map_or(conf.discard, Into::into);
+        conf.storage = value.storage.into();
+        conf.retention = value.retention.into();
+        conf.discard = value.discard.into();
         conf.mirror = value.mirror.map(TryInto::try_into).transpose()?;
         conf.sources = value
             .sources
@@ -903,15 +902,23 @@ impl From<async_nats::jetstream::stream::SourceInfo> for SourceInfo {
     }
 }
 
-#[pyo3::pyclass(from_py_object)]
+#[pyo3::pyclass(from_py_object, get_all)]
 #[derive(Debug, Clone)]
 pub struct StreamInfo {
     pub config: StreamConfig,
-    pub created: time::OffsetDateTime,
+    pub created: i64,
     pub state: StreamState,
     pub cluster: Option<ClusterInfo>,
     pub mirror: Option<SourceInfo>,
     pub sources: Vec<SourceInfo>,
+}
+
+#[pyo3::pymethods]
+impl StreamInfo {
+    #[must_use]
+    pub fn __str__(&self) -> String {
+        format!("{self:#?}")
+    }
 }
 
 impl TryFrom<async_nats::jetstream::stream::Info> for StreamInfo {
@@ -919,12 +926,28 @@ impl TryFrom<async_nats::jetstream::stream::Info> for StreamInfo {
     fn try_from(value: async_nats::jetstream::stream::Info) -> Result<Self, Self::Error> {
         Ok(Self {
             config: value.config.try_into()?,
-            created: value.created,
+            created: value.created.unix_timestamp(),
             state: value.state.into(),
             cluster: value.cluster.map(Into::into),
             mirror: value.mirror.map(Into::into),
             sources: value.sources.into_iter().map(Into::into).collect(),
         })
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Clone, Debug)]
+pub struct PurgeResponse {
+    success: bool,
+    purged: u64,
+}
+
+impl From<async_nats::jetstream::stream::PurgeResponse> for PurgeResponse {
+    fn from(value: async_nats::jetstream::stream::PurgeResponse) -> Self {
+        Self {
+            success: value.success,
+            purged: value.purged,
+        }
     }
 }
 
@@ -964,6 +987,75 @@ impl Stream {
         let ctx = self.stream.clone();
         natsrpy_future(py, async move {
             StreamInfo::try_from(ctx.read().await.get_info().await?)
+        })
+    }
+
+    #[pyo3(signature=(
+        filter=None,
+        sequence=None,
+        keep=None,
+    ))]
+    pub fn purge<'py>(
+        &self,
+        py: Python<'py>,
+        filter: Option<String>,
+        sequence: Option<u64>,
+        keep: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            let mut purge_request = ctx.read().await.purge();
+            if let Some(filter) = filter {
+                purge_request = purge_request.filter(filter);
+            }
+            let purge_response = match (sequence, keep) {
+                (None, None) => purge_request.await,
+                (Some(seq), None) => purge_request.sequence(seq).await,
+                (None, Some(keep)) => purge_request.keep(keep).await,
+                _ => {
+                    return Err(NatsrpyError::InvalidArgument(String::from(
+                        "Either keep or sequence can be set, but not both.",
+                    )));
+                }
+            };
+            let resp = purge_response?;
+            if !resp.success {
+                return Err(NatsrpyError::SessionError(String::from(
+                    "Purge failed. Check server logs for more info.",
+                )));
+            }
+            Ok(resp.purged)
+        })
+    }
+
+    pub fn create_pull_consumer<'py>(
+        &self,
+        py: Python<'py>,
+        config: consumers::pull::PullConsumerConfig,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            Ok(super::consumers::pull::consumer::PullConsumer::new(
+                ctx.read()
+                    .await
+                    .create_consumer(async_nats::jetstream::consumer::pull::Config::try_from(
+                        config,
+                    )?)
+                    .await?,
+            ))
+        })
+    }
+
+    pub fn get_pull_consumer<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            Ok(super::consumers::pull::consumer::PullConsumer::new(
+                ctx.read().await.get_consumer(&name).await?,
+            ))
         })
     }
 }
