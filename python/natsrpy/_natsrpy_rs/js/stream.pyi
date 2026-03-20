@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from natsrpy._natsrpy_rs.js.managers.consumers import ConsumersManager
+from .managers import ConsumersManager
 
 class StorageType:
     FILE: StorageType

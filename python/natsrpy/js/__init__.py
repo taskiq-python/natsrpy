@@ -1,4 +1,14 @@
 from natsrpy._natsrpy_rs.js import JetStream
+from natsrpy.js.consumers import (
+    AckPolicy,
+    DeliverPolicy,
+    PriorityPolicy,
+    PullConsumer,
+    PullConsumerConfig,
+    PushConsumer,
+    PushConsumerConfig,
+    ReplayPolicy,
+)
 from natsrpy.js.kv import KeyValue, KVConfig
 from natsrpy.js.stream import (
     Compression,
@@ -18,8 +28,10 @@ from natsrpy.js.stream import (
 )
 
 __all__ = [
+    "AckPolicy",
     "Compression",
     "ConsumerLimits",
+    "DeliverPolicy",
     "DiscardPolicy",
     "External",
     "JetStream",
@@ -27,6 +39,12 @@ __all__ = [
     "KeyValue",
     "PersistenceMode",
     "Placement",
+    "PriorityPolicy",
+    "PullConsumer",
+    "PullConsumerConfig",
+    "PushConsumer",
+    "PushConsumerConfig",
+    "ReplayPolicy",
     "Republish",
     "RetentionPolicy",
     "Source",

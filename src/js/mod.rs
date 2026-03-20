@@ -8,10 +8,7 @@ pub mod stream;
 pub mod pymod {
     // Classes
     #[pymodule_export]
-    pub use super::{
-        jetstream::JetStream,
-        kv::{KVConfig, KeyValue},
-    };
+    pub use super::jetstream::JetStream;
 
     // SubModules
     #[pymodule_export]

@@ -1,16 +1,13 @@
 use std::sync::Arc;
 
 use async_nats::{Subject, client::traits::Publisher, connection::State};
-use pyo3::{
-    Bound, PyAny, Python,
-    types::{PyBytes, PyBytesMethods, PyDict},
-};
+use pyo3::{Bound, PyAny, Python, types::PyDict};
 use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::managers::{kv::KVManager, streams::StreamsManager},
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
 };
 
 #[pyo3::pyclass]
@@ -41,13 +38,13 @@ impl JetStream {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: &Bound<PyBytes>,
+        payload: SendableValue,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
-        let data = bytes::Bytes::from(payload.as_bytes().to_vec());
+        let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;

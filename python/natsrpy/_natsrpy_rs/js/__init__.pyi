@@ -1,11 +1,10 @@
-from .managers.kv import KVManager
-from .managers.streams import StreamsManager
+from .managers import KVManager, StreamsManager
 
 class JetStream:
     async def publish(
         self,
         subject: str,
-        payload: bytes,
+        payload: str | bytes | bytearray | memoryview,
         *,
         headers: dict[str, str] | None = None,
         reply: str | None = None,
