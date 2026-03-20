@@ -4,12 +4,12 @@ use crate::exceptions::rust_err::{NatsrpyError, NatsrpyResult};
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd)]
 pub enum DeliverPolicy {
     #[default]
-    All,
-    Last,
-    New,
-    ByStartSequence,
-    ByStartTime,
-    LastPerSubject,
+    ALL,
+    LAST,
+    NEW,
+    BY_START_SEQUENCE,
+    BY_START_TIME,
+    LAST_PER_SUBJECT,
 }
 
 impl DeliverPolicy {
@@ -19,22 +19,24 @@ impl DeliverPolicy {
         start_time: Option<i64>,
     ) -> NatsrpyResult<async_nats::jetstream::consumer::DeliverPolicy> {
         let result = match self {
-            Self::All => async_nats::jetstream::consumer::DeliverPolicy::All,
-            Self::Last => async_nats::jetstream::consumer::DeliverPolicy::Last,
-            Self::New => async_nats::jetstream::consumer::DeliverPolicy::New,
-            Self::LastPerSubject => async_nats::jetstream::consumer::DeliverPolicy::Last,
-            Self::ByStartSequence => {
+            Self::ALL => async_nats::jetstream::consumer::DeliverPolicy::All,
+            Self::LAST => async_nats::jetstream::consumer::DeliverPolicy::Last,
+            Self::NEW => async_nats::jetstream::consumer::DeliverPolicy::New,
+            Self::LAST_PER_SUBJECT => {
+                async_nats::jetstream::consumer::DeliverPolicy::LastPerSubject
+            }
+            Self::BY_START_SEQUENCE => {
                 let Some(start_sequence) = start_sequence else {
                     return Err(NatsrpyError::SessionError(String::from(
-                        "Start sequence is not present",
+                        "Start sequence is not present, but deliver_policy is set to BY_START_SEQUENCE",
                     )));
                 };
                 async_nats::jetstream::consumer::DeliverPolicy::ByStartSequence { start_sequence }
             }
-            Self::ByStartTime => {
+            Self::BY_START_TIME => {
                 let Some(start_time) = start_time else {
                     return Err(NatsrpyError::SessionError(String::from(
-                        "Start sequence is not present",
+                        "Start time is not present, but deliver_policy is set to BY_START_TIME",
                     )));
                 };
                 async_nats::jetstream::consumer::DeliverPolicy::ByStartTime {
@@ -50,17 +52,17 @@ impl DeliverPolicy {
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd)]
 pub enum AckPolicy {
     #[default]
-    Explicit,
-    None,
-    All,
+    EXPLICIT,
+    NONE,
+    ALL,
 }
 
 impl From<AckPolicy> for async_nats::jetstream::consumer::AckPolicy {
     fn from(value: AckPolicy) -> Self {
         match value {
-            AckPolicy::Explicit => Self::Explicit,
-            AckPolicy::None => Self::None,
-            AckPolicy::All => Self::All,
+            AckPolicy::EXPLICIT => Self::Explicit,
+            AckPolicy::NONE => Self::None,
+            AckPolicy::ALL => Self::All,
         }
     }
 }
@@ -69,15 +71,15 @@ impl From<AckPolicy> for async_nats::jetstream::consumer::AckPolicy {
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd)]
 pub enum ReplayPolicy {
     #[default]
-    Instant,
-    Original,
+    INSTANT,
+    ORIGINAL,
 }
 
 impl From<ReplayPolicy> for async_nats::jetstream::consumer::ReplayPolicy {
     fn from(value: ReplayPolicy) -> Self {
         match value {
-            ReplayPolicy::Instant => Self::Instant,
-            ReplayPolicy::Original => Self::Original,
+            ReplayPolicy::INSTANT => Self::Instant,
+            ReplayPolicy::ORIGINAL => Self::Original,
         }
     }
 }
@@ -86,19 +88,19 @@ impl From<ReplayPolicy> for async_nats::jetstream::consumer::ReplayPolicy {
 #[derive(Debug, Clone, Default, Copy, PartialEq, Eq, PartialOrd)]
 pub enum PriorityPolicy {
     #[default]
-    None,
-    Overflow,
-    PinnedClient,
-    Prioritized,
+    NONE,
+    OVERFLOW,
+    PINNED_CLIENT,
+    PRIORITIZED,
 }
 
 impl From<PriorityPolicy> for async_nats::jetstream::consumer::PriorityPolicy {
     fn from(value: PriorityPolicy) -> Self {
         match value {
-            PriorityPolicy::None => Self::None,
-            PriorityPolicy::Overflow => Self::Overflow,
-            PriorityPolicy::PinnedClient => Self::PinnedClient,
-            PriorityPolicy::Prioritized => Self::Prioritized,
+            PriorityPolicy::NONE => Self::None,
+            PriorityPolicy::OVERFLOW => Self::Overflow,
+            PriorityPolicy::PINNED_CLIENT => Self::PinnedClient,
+            PriorityPolicy::PRIORITIZED => Self::Prioritized,
         }
     }
 }

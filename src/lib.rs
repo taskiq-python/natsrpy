@@ -8,6 +8,9 @@
 )]
 #![
     allow(
+        // Beacsue some types naming conventions are
+        // just different to the ones that rust have.
+        non_camel_case_types,
         // I don't care about this.
         clippy::module_name_repetitions,
         // Yo, the hell you should put

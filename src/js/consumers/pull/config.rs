@@ -6,7 +6,7 @@ use crate::{
 };
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PullConsumerConfig {
     pub durable_name: Option<String>,
     pub name: Option<String>,
@@ -38,7 +38,106 @@ pub struct PullConsumerConfig {
     pub pause_until: Option<i64>,
 }
 
-impl PullConsumerConfig {}
+#[pyo3::pymethods]
+impl PullConsumerConfig {
+    #[new]
+    #[pyo3(signature=(
+        durable_name=None,
+        name=None,
+        description=None,
+        deliver_policy=None,
+        delivery_start_sequence=None,
+        delivery_start_time=None,
+        ack_policy=None,
+        ack_wait=None,
+        max_deliver=None,
+        filter_subject=None,
+        filter_subjects=None,
+        replay_policy=None,
+        rate_limit=None,
+        sample_frequency=None,
+        max_waiting=None,
+        max_ack_pending=None,
+        headers_only=None,
+        max_batch=None,
+        max_bytes=None,
+        max_expires=None,
+        inactive_threshold=None,
+        num_replicas=None,
+        memory_storage=None,
+        metadata=None,
+        backoff=None,
+        priority_policy=None,
+        priority_groups=None,
+        pause_until=None,
+    ))]
+    #[must_use]
+    pub fn __new__(
+        durable_name: Option<String>,
+        name: Option<String>,
+        description: Option<String>,
+        deliver_policy: Option<DeliverPolicy>,
+        delivery_start_sequence: Option<u64>,
+        delivery_start_time: Option<i64>,
+        ack_policy: Option<AckPolicy>,
+        ack_wait: Option<Duration>,
+        max_deliver: Option<i64>,
+        filter_subject: Option<String>,
+        filter_subjects: Option<Vec<String>>,
+        replay_policy: Option<ReplayPolicy>,
+        rate_limit: Option<u64>,
+        sample_frequency: Option<u8>,
+        max_waiting: Option<i64>,
+        max_ack_pending: Option<i64>,
+        headers_only: Option<bool>,
+        max_batch: Option<i64>,
+        max_bytes: Option<i64>,
+        max_expires: Option<Duration>,
+        inactive_threshold: Option<Duration>,
+        num_replicas: Option<usize>,
+        memory_storage: Option<bool>,
+        metadata: Option<HashMap<String, String>>,
+        backoff: Option<Vec<Duration>>,
+        priority_policy: Option<PriorityPolicy>,
+        priority_groups: Option<Vec<String>>,
+        pause_until: Option<i64>,
+    ) -> Self {
+        let mut conf = Self {
+            durable_name,
+            name,
+            description,
+            delivery_start_sequence,
+            delivery_start_time,
+            pause_until,
+            ..Default::default()
+        };
+
+        conf.deliver_policy = deliver_policy.unwrap_or_default();
+        conf.ack_policy = ack_policy.unwrap_or_default();
+        conf.ack_wait = ack_wait.unwrap_or_default();
+        conf.max_deliver = max_deliver.unwrap_or_default();
+        conf.filter_subject = filter_subject.unwrap_or_default();
+        conf.filter_subjects = filter_subjects.unwrap_or_default();
+        conf.replay_policy = replay_policy.unwrap_or_default();
+        conf.rate_limit = rate_limit.unwrap_or_default();
+        conf.sample_frequency = sample_frequency.unwrap_or_default();
+        conf.max_waiting = max_waiting.unwrap_or_default();
+        conf.max_ack_pending = max_ack_pending.unwrap_or_default();
+        conf.headers_only = headers_only.unwrap_or_default();
+        conf.max_batch = max_batch.unwrap_or_default();
+        conf.max_bytes = max_bytes.unwrap_or_default();
+        conf.max_expires = max_expires.unwrap_or_default();
+        conf.inactive_threshold = inactive_threshold.unwrap_or_default();
+        conf.num_replicas = num_replicas.unwrap_or_default();
+        conf.memory_storage = memory_storage.unwrap_or_default();
+        conf.metadata = metadata.unwrap_or_default();
+        conf.backoff = backoff.unwrap_or_default();
+        conf.priority_policy = priority_policy.unwrap_or_default();
+        conf.priority_groups = priority_groups.unwrap_or_default();
+
+        conf
+    }
+}
 
 impl TryFrom<PullConsumerConfig> for async_nats::jetstream::consumer::pull::Config {
     type Error = NatsrpyError;

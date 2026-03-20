@@ -6,7 +6,7 @@ use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    js::consumers::{self},
+    js::managers::consumers::ConsumersManager,
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 use pyo3::{Bound, PyAny, Python};
@@ -493,6 +493,7 @@ impl From<async_nats::jetstream::stream::ClusterInfo> for ClusterInfo {
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
 #[derive(Debug, Clone, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct StreamConfig {
     pub name: String,
     pub subjects: Vec<String>,
@@ -620,7 +621,7 @@ impl StreamConfig {
         allow_message_schedules: Option<bool>,
         allow_message_counter: Option<bool>,
     ) -> NatsrpyResult<Self> {
-        let mut config = Self {
+        let config = Self {
             name,
             subjects,
             description,
@@ -635,38 +636,33 @@ impl StreamConfig {
             persist_mode,
             pause_until,
             subject_delete_marker_ttl,
-            ..Default::default()
-        };
 
-        config.max_bytes = max_bytes.unwrap_or(config.max_bytes);
-        config.max_messages = max_messages.unwrap_or(config.max_messages);
-        config.max_messages_per_subject =
-            max_messages_per_subject.unwrap_or(config.max_messages_per_subject);
-        config.discard = discard.unwrap_or(config.discard);
-        config.discard_new_per_subject =
-            discard_new_per_subject.unwrap_or(config.discard_new_per_subject);
-        config.retention = retention.unwrap_or(config.retention);
-        config.max_consumers = max_consumers.unwrap_or(config.max_consumers);
-        config.max_age = max_age.unwrap_or(config.max_age);
-        config.max_message_size = max_message_size.unwrap_or(config.max_message_size);
-        config.storage = storage.unwrap_or(config.storage);
-        config.num_replicas = num_replicas.unwrap_or(config.num_replicas);
-        config.no_ack = no_ack.unwrap_or(config.no_ack);
-        config.duplicate_window = duplicate_window.unwrap_or(config.duplicate_window);
-        config.template_owner = template_owner.unwrap_or(config.template_owner);
-        config.sealed = sealed.unwrap_or(config.sealed);
-        config.allow_rollup = allow_rollup.unwrap_or(config.allow_rollup);
-        config.deny_delete = deny_delete.unwrap_or(config.deny_delete);
-        config.deny_purge = deny_purge.unwrap_or(config.deny_purge);
-        config.allow_direct = allow_direct.unwrap_or(config.allow_direct);
-        config.mirror_direct = mirror_direct.unwrap_or(config.mirror_direct);
-        config.metadata = metadata.unwrap_or(config.metadata);
-        config.allow_message_ttl = allow_message_ttl.unwrap_or(config.allow_message_ttl);
-        config.allow_atomic_publish = allow_atomic_publish.unwrap_or(config.allow_atomic_publish);
-        config.allow_message_schedules =
-            allow_message_schedules.unwrap_or(config.allow_message_schedules);
-        config.allow_message_counter =
-            allow_message_counter.unwrap_or(config.allow_message_counter);
+            max_bytes: max_bytes.unwrap_or_default(),
+            max_messages: max_messages.unwrap_or_default(),
+            max_messages_per_subject: max_messages_per_subject.unwrap_or_default(),
+            discard: discard.unwrap_or_default(),
+            discard_new_per_subject: discard_new_per_subject.unwrap_or_default(),
+            retention: retention.unwrap_or_default(),
+            max_consumers: max_consumers.unwrap_or_default(),
+            max_age: max_age.unwrap_or_default(),
+            max_message_size: max_message_size.unwrap_or_default(),
+            storage: storage.unwrap_or_default(),
+            num_replicas: num_replicas.unwrap_or_default(),
+            no_ack: no_ack.unwrap_or_default(),
+            duplicate_window: duplicate_window.unwrap_or_default(),
+            template_owner: template_owner.unwrap_or_default(),
+            sealed: sealed.unwrap_or_default(),
+            allow_rollup: allow_rollup.unwrap_or_default(),
+            deny_delete: deny_delete.unwrap_or_default(),
+            deny_purge: deny_purge.unwrap_or_default(),
+            allow_direct: allow_direct.unwrap_or_default(),
+            mirror_direct: mirror_direct.unwrap_or_default(),
+            metadata: metadata.unwrap_or_default(),
+            allow_message_ttl: allow_message_ttl.unwrap_or_default(),
+            allow_atomic_publish: allow_atomic_publish.unwrap_or_default(),
+            allow_message_schedules: allow_message_schedules.unwrap_or_default(),
+            allow_message_counter: allow_message_counter.unwrap_or_default(),
+        };
 
         Ok(config)
     }
@@ -969,6 +965,12 @@ impl Stream {
 
 #[pyo3::pymethods]
 impl Stream {
+    #[getter]
+    #[must_use]
+    pub fn consumers(&self) -> ConsumersManager {
+        ConsumersManager::new(self.stream.clone())
+    }
+
     pub fn direct_get<'py>(
         &self,
         py: Python<'py>,
@@ -1025,37 +1027,6 @@ impl Stream {
                 )));
             }
             Ok(resp.purged)
-        })
-    }
-
-    pub fn create_pull_consumer<'py>(
-        &self,
-        py: Python<'py>,
-        config: consumers::pull::PullConsumerConfig,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
-            Ok(super::consumers::pull::consumer::PullConsumer::new(
-                ctx.read()
-                    .await
-                    .create_consumer(async_nats::jetstream::consumer::pull::Config::try_from(
-                        config,
-                    )?)
-                    .await?,
-            ))
-        })
-    }
-
-    pub fn get_pull_consumer<'py>(
-        &self,
-        py: Python<'py>,
-        name: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
-            Ok(super::consumers::pull::consumer::PullConsumer::new(
-                ctx.read().await.get_consumer(&name).await?,
-            ))
         })
     }
 }

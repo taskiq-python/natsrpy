@@ -9,5 +9,5 @@ pub mod pymod {
     #[pymodule_export]
     pub use super::pull::{config::PullConsumerConfig, consumer::PullConsumer};
     #[pymodule_export]
-    pub use super::push::config::PushConsumerConfig;
+    pub use super::push::{config::PushConsumerConfig, consumer::PushConsumer};
 }

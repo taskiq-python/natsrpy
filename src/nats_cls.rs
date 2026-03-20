@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use crate::{
     exceptions::rust_err::NatsrpyError,
     subscription::Subscription,
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
 };
 
 #[pyo3::pyclass(name = "Nats")]
@@ -118,13 +118,14 @@ impl NatsCls {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: &Bound<PyBytes>,
+        payload: SendableValue,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
-        let data = bytes::Bytes::copy_from_slice(payload.as_bytes());
+        log::info!("Payload: {payload:?}");
+        let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;

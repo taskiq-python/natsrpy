@@ -28,7 +28,7 @@ class Nats:
     async def publish(
         self,
         subject: str,
-        payload: bytes,
+        payload: bytes | str | bytearray | memoryview,
         *,
         headers: dict[str, Any] | None = None,
         reply: str | None = None,

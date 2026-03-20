@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any
 
+from natsrpy._natsrpy_rs.js.managers.consumers import ConsumersManager
+
 class StorageType:
     FILE: StorageType
     MEMORY: StorageType
@@ -256,3 +258,6 @@ class Stream:
             defaults to None
         :return: number of messages purged
         """
+
+    @property
+    def consumers(self) -> ConsumersManager: ...

@@ -37,6 +37,102 @@ pub struct PushConsumerConfig {
     pub pause_until: Option<i64>,
 }
 
+#[pyo3::pymethods]
+impl PushConsumerConfig {
+    #[new]
+    #[pyo3(signature=(
+        deliver_subject,
+        durable_name=None,
+        name=None,
+        description=None,
+        deliver_group=None,
+        deliver_policy=None,
+        delivery_start_sequence=None,
+        delivery_start_time=None,
+        ack_policy=None,
+        ack_wait=None,
+        max_deliver=None,
+        filter_subject=None,
+        filter_subjects=None,
+        replay_policy=None,
+        rate_limit=None,
+        sample_frequency=None,
+        max_waiting=None,
+        max_ack_pending=None,
+        headers_only=None,
+        flow_control=None,
+        idle_heartbeat=None,
+        num_replicas=None,
+        memory_storage=None,
+        metadata=None,
+        backoff=None,
+        inactive_threshold=None,
+        pause_until=None,
+
+    ))]
+    #[must_use]
+    pub fn __new__(
+        deliver_subject: String,
+        durable_name: Option<String>,
+        name: Option<String>,
+        description: Option<String>,
+        deliver_group: Option<String>,
+        deliver_policy: Option<DeliverPolicy>,
+        delivery_start_sequence: Option<u64>,
+        delivery_start_time: Option<i64>,
+        ack_policy: Option<AckPolicy>,
+        ack_wait: Option<Duration>,
+        max_deliver: Option<i64>,
+        filter_subject: Option<String>,
+        filter_subjects: Option<Vec<String>>,
+        replay_policy: Option<ReplayPolicy>,
+        rate_limit: Option<u64>,
+        sample_frequency: Option<u8>,
+        max_waiting: Option<i64>,
+        max_ack_pending: Option<i64>,
+        headers_only: Option<bool>,
+        flow_control: Option<bool>,
+        idle_heartbeat: Option<Duration>,
+        num_replicas: Option<usize>,
+        memory_storage: Option<bool>,
+        metadata: Option<HashMap<String, String>>,
+        backoff: Option<Vec<Duration>>,
+        inactive_threshold: Option<Duration>,
+        pause_until: Option<i64>,
+    ) -> Self {
+        Self {
+            deliver_subject,
+            durable_name,
+            name,
+            description,
+            deliver_group,
+            delivery_start_sequence,
+            delivery_start_time,
+            pause_until,
+
+            deliver_policy: deliver_policy.unwrap_or_default(),
+            ack_policy: ack_policy.unwrap_or_default(),
+            ack_wait: ack_wait.unwrap_or_default(),
+            max_deliver: max_deliver.unwrap_or_default(),
+            filter_subject: filter_subject.unwrap_or_default(),
+            filter_subjects: filter_subjects.unwrap_or_default(),
+            replay_policy: replay_policy.unwrap_or_default(),
+            rate_limit: rate_limit.unwrap_or_default(),
+            sample_frequency: sample_frequency.unwrap_or_default(),
+            max_waiting: max_waiting.unwrap_or_default(),
+            max_ack_pending: max_ack_pending.unwrap_or_default(),
+            headers_only: headers_only.unwrap_or_default(),
+            flow_control: flow_control.unwrap_or_default(),
+            idle_heartbeat: idle_heartbeat.unwrap_or_default(),
+            num_replicas: num_replicas.unwrap_or_default(),
+            memory_storage: memory_storage.unwrap_or_default(),
+            metadata: metadata.unwrap_or_default(),
+            backoff: backoff.unwrap_or_default(),
+            inactive_threshold: inactive_threshold.unwrap_or_default(),
+        }
+    }
+}
+
 impl TryFrom<PushConsumerConfig> for async_nats::jetstream::consumer::push::Config {
     type Error = NatsrpyError;
 

@@ -1,4 +1,4 @@
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use async_nats::{Subject, client::traits::Publisher, connection::State};
 use pyo3::{
@@ -9,10 +9,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    js::{
-        kv::{KVConfig, KeyValue},
-        stream::StreamConfig,
-    },
+    js::managers::{kv::KVManager, streams::StreamsManager},
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
 };
 
@@ -73,89 +70,15 @@ impl JetStream {
         })
     }
 
-    pub fn create_kv<'py>(
-        &self,
-        py: Python<'py>,
-        config: &Bound<'py, KVConfig>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        let config = config.borrow().deref().clone().try_into()?;
-
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.create_key_value(config).await?))
-        })
+    #[getter]
+    #[must_use]
+    pub fn kv(&self) -> KVManager {
+        KVManager::new(self.ctx.clone())
     }
 
-    pub fn get_kv<'py>(&self, py: Python<'py>, bucket: String) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.get_key_value(bucket).await?))
-        })
-    }
-
-    pub fn update_kv<'py>(
-        &self,
-        py: Python<'py>,
-        config: &Bound<'py, KVConfig>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        let config = config.borrow().deref().clone().try_into()?;
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.update_key_value(config).await?))
-        })
-    }
-
-    pub fn delete_kv<'py>(
-        &self,
-        py: Python<'py>,
-        bucket: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(js.delete_key_value(bucket).await?.success)
-        })
-    }
-
-    pub fn get_stream<'py>(
-        &self,
-        py: Python<'py>,
-        name: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(super::stream::Stream::new(js.get_stream(name).await?))
-        })
-    }
-
-    pub fn create_stream<'py>(
-        &self,
-        py: Python<'py>,
-        config: StreamConfig,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(super::stream::Stream::new(
-                js.create_stream(async_nats::jetstream::stream::Config::try_from(config)?)
-                    .await?,
-            ))
-        })
-    }
-
-    pub fn delete_stream<'py>(
-        &self,
-        py: Python<'py>,
-        name: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(js.delete_stream(name).await?.success)
-        })
+    #[getter]
+    #[must_use]
+    pub fn streams(&self) -> StreamsManager {
+        StreamsManager::new(self.ctx.clone())
     }
 }
