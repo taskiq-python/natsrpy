@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-
 type NatsPullConsumer =
     async_nats::jetstream::consumer::Consumer<async_nats::jetstream::consumer::pull::Config>;
 
