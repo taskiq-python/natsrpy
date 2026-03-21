@@ -7,7 +7,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::natsrpy_future,
+    utils::futures::natsrpy_future_with_timeout,
 };
 
 #[pyo3::pyclass]
@@ -39,21 +39,12 @@ impl Subscription {
         let Some(inner) = self.inner.clone() else {
             return Err(NatsrpyError::NotInitialized);
         };
-
-        let future = async move {
+        natsrpy_future_with_timeout(py, timeout, async move {
             let Some(message) = inner.lock().await.next().await else {
                 return Err(PyStopAsyncIteration::new_err("End of the stream.").into());
             };
 
             crate::message::Message::try_from(message)
-        };
-
-        natsrpy_future(py, async move {
-            if let Some(timeout) = timeout {
-                tokio::time::timeout(timeout, future).await?
-            } else {
-                future.await
-            }
         })
     }
 

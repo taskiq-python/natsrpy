@@ -1,4 +1,4 @@
-use pyo3::exceptions::PyTypeError;
+use pyo3::exceptions::{PyTimeoutError, PyTypeError};
 
 use crate::exceptions::py_err::{NatsrpyPublishError, NatsrpySessionError};
 
@@ -72,6 +72,7 @@ impl From<NatsrpyError> for pyo3::PyErr {
     fn from(value: NatsrpyError) -> Self {
         match value {
             NatsrpyError::PublishError(_) => NatsrpyPublishError::new_err(value.to_string()),
+            NatsrpyError::Timeout(_) => PyTimeoutError::new_err(value.to_string()),
             NatsrpyError::PyError(py_err) => py_err,
             NatsrpyError::InvalidArgument(descr) => PyTypeError::new_err(descr),
             _ => NatsrpySessionError::new_err(value.to_string()),

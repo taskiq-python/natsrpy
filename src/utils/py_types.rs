@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use pyo3::{
     FromPyObject,
     types::{PyBytes, PyBytesMethods},
@@ -37,6 +39,38 @@ impl From<SendableValue> for bytes::Bytes {
         match value {
             SendableValue::Bytes(bytes) => bytes,
             SendableValue::String(str) => Self::from(str.into_bytes()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
+pub enum TimeoutValue {
+    Duration(Duration),
+    FloatSecs(f32),
+}
+
+impl From<TimeoutValue> for Duration {
+    fn from(value: TimeoutValue) -> Self {
+        match value {
+            TimeoutValue::Duration(duration) => duration,
+            TimeoutValue::FloatSecs(fsecs) => Self::from_secs_f32(fsecs),
+        }
+    }
+}
+
+impl<'py> FromPyObject<'_, 'py> for TimeoutValue {
+    type Error = NatsrpyError;
+
+    fn extract(obj: pyo3::Borrowed<'_, 'py, pyo3::PyAny>) -> Result<Self, Self::Error> {
+        #[allow(clippy::option_if_let_else)]
+        if let Ok(fsec) = obj.extract::<f32>() {
+            Ok(Self::FloatSecs(fsec))
+        } else if let Ok(duration) = obj.extract::<Duration>() {
+            Ok(Self::Duration(duration))
+        } else {
+            Err(NatsrpyError::InvalidArgument(String::from(
+                "As timeouts only float or timedelta are accepted.",
+            )))
         }
     }
 }

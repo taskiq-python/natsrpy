@@ -4,7 +4,10 @@ use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, Python};
 use tokio::sync::RwLock;
 
-use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
+use crate::{
+    exceptions::rust_err::NatsrpyResult,
+    utils::{futures::natsrpy_future_with_timeout, py_types::TimeoutValue},
+};
 
 type NatsPullConsumer =
     async_nats::jetstream::consumer::Consumer<async_nats::jetstream::consumer::pull::Config>;
@@ -35,6 +38,7 @@ impl PullConsumer {
         expires=None,
         min_pending=None,
         min_ack_pending=None,
+        timeout=None,
     ))]
     pub fn fetch<'py>(
         &self,
@@ -47,12 +51,14 @@ impl PullConsumer {
         expires: Option<Duration>,
         min_pending: Option<usize>,
         min_ack_pending: Option<usize>,
+        timeout: Option<TimeoutValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.consumer.clone();
+
+        // Because we borrow cosnumer lock
+        // later for modifications of fetchbuilder.
         #[allow(clippy::significant_drop_tightening)]
-        natsrpy_future(py, async move {
-            // Because we borrow created value
-            // later for modifications.
+        natsrpy_future_with_timeout(py, timeout, async move {
             let consumer = ctx.read().await;
             let mut fetch_builder = consumer.fetch();
             if let Some(max_messages) = max_messages {

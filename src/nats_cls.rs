@@ -9,7 +9,12 @@ use tokio::sync::RwLock;
 use crate::{
     exceptions::rust_err::NatsrpyError,
     subscription::Subscription,
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
+    utils::{
+        futures::natsrpy_future_with_timeout,
+        headers::NatsrpyHeadermapExt,
+        natsrpy_future,
+        py_types::{SendableValue, TimeoutValue},
+    },
 };
 
 #[pyo3::pyclass(name = "Nats")]
@@ -23,8 +28,8 @@ pub struct NatsCls {
     read_buffer_capacity: u16,
     sender_capacity: usize,
     max_reconnects: Option<usize>,
-    connection_timeout: Duration,
-    request_timeout: Option<Duration>,
+    connection_timeout: TimeoutValue,
+    request_timeout: Option<TimeoutValue>,
 }
 
 #[pyo3::pymethods]
@@ -40,8 +45,8 @@ impl NatsCls {
         read_buffer_capacity=65535,
         sender_capacity=128,
         max_reconnects=None,
-        connection_timeout=Duration::from_secs(5),
-        request_timeout=Duration::from_secs(10),
+        connection_timeout=TimeoutValue::FloatSecs(5.0),
+        request_timeout=TimeoutValue::FloatSecs(10.0),
     ))]
     fn __new__(
         addrs: Vec<String>,
@@ -52,8 +57,8 @@ impl NatsCls {
         read_buffer_capacity: u16,
         sender_capacity: usize,
         max_reconnects: Option<usize>,
-        connection_timeout: Duration,
-        request_timeout: Option<Duration>,
+        connection_timeout: TimeoutValue,
+        request_timeout: Option<TimeoutValue>,
     ) -> Self {
         Self {
             nats_session: Arc::new(RwLock::new(None)),
@@ -80,8 +85,8 @@ impl NatsCls {
         }
         conn_opts = conn_opts
             .max_reconnects(self.max_reconnects)
-            .connection_timeout(self.connection_timeout)
-            .request_timeout(self.request_timeout)
+            .connection_timeout(self.connection_timeout.into())
+            .request_timeout(self.request_timeout.map(Into::into))
             .read_buffer_capacity(self.read_buffer_capacity)
             .client_capacity(self.sender_capacity);
 
@@ -94,23 +99,24 @@ impl NatsCls {
 
         let session = self.nats_session.clone();
         let address = self.addr.clone();
-        let startup_future = async move {
-            if session.read().await.is_some() {
-                return Err(NatsrpyError::SessionError(
-                    "NATS session already exists".to_string(),
-                ));
-            }
-            // Scoping for early-dropping of a guard.
-            {
-                let mut sesion_guard = session.write().await;
-                *sesion_guard = Some(conn_opts.connect(address).await?);
-            }
-            Ok(())
-        };
         let timeout = self.connection_timeout;
-        return Ok(natsrpy_future(py, async move {
-            tokio::time::timeout(timeout, startup_future).await?
-        })?);
+        return Ok(natsrpy_future_with_timeout(
+            py,
+            Some(timeout),
+            async move {
+                if session.read().await.is_some() {
+                    return Err(NatsrpyError::SessionError(
+                        "NATS session already exists".to_string(),
+                    ));
+                }
+                // Scoping for early-dropping of a guard.
+                {
+                    let mut sesion_guard = session.write().await;
+                    *sesion_guard = Some(conn_opts.connect(address).await?);
+                }
+                Ok(())
+            },
+        )?);
     }
 
     #[pyo3(signature = (subject, payload, *, headers=None, reply=None, err_on_disconnect = false))]
