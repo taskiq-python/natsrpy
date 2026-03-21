@@ -7,6 +7,7 @@ type NatsPushConsumer =
 
 #[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone)]
+#[allow(dead_code)] // TODO! remove later.
 pub struct PushConsumer {
     consumer: Arc<RwLock<NatsPushConsumer>>,
 }
