@@ -1,6 +1,6 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
 use pyo3::{
-    Bound, PyAny, PyResult, Python, pyclass, pymethods,
+    Bound, PyAny, PyResult, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use std::{sync::Arc, time::Duration};
@@ -9,10 +9,10 @@ use tokio::sync::RwLock;
 use crate::{
     exceptions::rust_err::NatsrpyError,
     subscription::Subscription,
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
 };
 
-#[pyclass(name = "Nats")]
+#[pyo3::pyclass(name = "Nats")]
 pub struct NatsCls {
     nats_session: Arc<tokio::sync::RwLock<Option<async_nats::Client>>>,
     addr: Vec<String>,
@@ -27,7 +27,7 @@ pub struct NatsCls {
     request_timeout: Option<Duration>,
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl NatsCls {
     #[new]
     #[pyo3(signature = (
@@ -118,13 +118,14 @@ impl NatsCls {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: &Bound<PyBytes>,
+        payload: SendableValue,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
     ) -> PyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
-        let data = bytes::Bytes::copy_from_slice(payload.as_bytes());
+        log::info!("Payload: {payload:?}");
+        let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;

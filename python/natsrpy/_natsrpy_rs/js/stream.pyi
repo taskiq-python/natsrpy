@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any
 
+from .managers import ConsumersManager
+
 class StorageType:
     FILE: StorageType
     MEMORY: StorageType
@@ -181,11 +183,81 @@ class StreamMessage:
     payload: bytes
     time: datetime
 
+class StreamState:
+    messages: int
+    bytes: int
+    first_sequence: int
+    first_timestamp: int
+    last_sequence: int
+    last_timestamp: int
+    consumer_count: int
+    subjects_count: int
+    deleted_count: int | None
+    deleted: list[int] | None
+
+class SourceInfo:
+    name: str
+    lag: int
+    active: timedelta | None
+    filter_subject: str | None
+    subject_transform_dest: str | None
+    subject_transforms: list[SubjectTransform]
+
+class PeerInfo:
+    name: str
+    current: bool
+    active: timedelta
+    offline: bool
+    lag: int | None
+
+class ClusterInfo:
+    name: str | None
+    raft_group: str | None
+    leader: str | None
+    leader_since: int | None
+    system_account: bool
+    traffic_account: str | None
+    replicas: list[PeerInfo]
+
+class StreamInfo:
+    config: StreamConfig
+    created: float
+    state: StreamState
+    cluster: ClusterInfo | None
+    mirror: SourceInfo | None
+    sources: list[SourceInfo]
+
 class Stream:
     async def direct_get(self, sequence: int) -> StreamMessage:
         """
-        Get direct message from a stream.
+        Get direct message from the stream.
 
-        Please note, that this method will throw an error
-        in case of stream being configured without `allow_direct=True`.
+        :param sequence: sequence number of the message to get.
+        :return: Message.
         """
+
+    async def get_info(self) -> StreamInfo:
+        """
+        Get information about the stream.
+
+        :return: Stream info.
+        """
+
+    async def purge(
+        self,
+        filter: str | None = None,
+        sequence: int | None = None,
+        keep: int | None = None,
+    ) -> int:
+        """
+        Purge current stream.
+
+        :param filter: filter of subjects to purge, defaults to None
+        :param sequence: Message sequence to purge up to (inclusive), defaults to None
+        :param keep: Message count to keep starting from the end of the stream,
+            defaults to None
+        :return: number of messages purged
+        """
+
+    @property
+    def consumers(self) -> ConsumersManager: ...

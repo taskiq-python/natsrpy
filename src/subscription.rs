@@ -2,7 +2,7 @@ use futures_util::StreamExt;
 use pyo3::exceptions::PyStopAsyncIteration;
 use std::{sync::Arc, time::Duration};
 
-use pyo3::{Bound, PyAny, PyRef, Python, pyclass, pymethods};
+use pyo3::{Bound, PyAny, PyRef, Python};
 use tokio::sync::Mutex;
 
 use crate::{
@@ -10,7 +10,7 @@ use crate::{
     utils::natsrpy_future,
 };
 
-#[pyclass]
+#[pyo3::pyclass]
 pub struct Subscription {
     inner: Option<Arc<Mutex<async_nats::Subscriber>>>,
 }
@@ -24,7 +24,7 @@ impl Subscription {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl Subscription {
     #[must_use]
     pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
@@ -42,14 +42,10 @@ impl Subscription {
 
         let future = async move {
             let Some(message) = inner.lock().await.next().await else {
-                return Err(NatsrpyError::from(PyStopAsyncIteration::new_err(
-                    "End of the stream.",
-                )));
+                return Err(PyStopAsyncIteration::new_err("End of the stream.").into());
             };
 
-            Python::attach(move |gil| -> NatsrpyResult<_> {
-                crate::message::Message::from_nats_message(gil, message)
-            })
+            crate::message::Message::try_from(message)
         };
 
         natsrpy_future(py, async move {

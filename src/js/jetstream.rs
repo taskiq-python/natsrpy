@@ -1,22 +1,16 @@
-use std::{ops::Deref, sync::Arc};
+use std::sync::Arc;
 
 use async_nats::{Subject, client::traits::Publisher, connection::State};
-use pyo3::{
-    Bound, PyAny, Python, pyclass, pymethods,
-    types::{PyBytes, PyBytesMethods, PyDict},
-};
+use pyo3::{Bound, PyAny, Python, types::PyDict};
 use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    js::{
-        kv::{KVConfig, KeyValue},
-        stream::StreamConfig,
-    },
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    js::managers::{kv::KVManager, streams::StreamsManager},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
 };
 
-#[pyclass]
+#[pyo3::pyclass]
 pub struct JetStream {
     ctx: Arc<RwLock<async_nats::jetstream::Context>>,
 }
@@ -30,7 +24,7 @@ impl JetStream {
     }
 }
 
-#[pymethods]
+#[pyo3::pymethods]
 impl JetStream {
     #[pyo3(signature = (
         subject,
@@ -44,13 +38,13 @@ impl JetStream {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: &Bound<PyBytes>,
+        payload: SendableValue,
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
-        let data = bytes::Bytes::from(payload.as_bytes().to_vec());
+        let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
@@ -73,77 +67,15 @@ impl JetStream {
         })
     }
 
-    pub fn create_kv<'py>(
-        &self,
-        py: Python<'py>,
-        config: &Bound<'py, KVConfig>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        let config = config.borrow().deref().clone().try_into()?;
-
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.create_key_value(config).await?))
-        })
+    #[getter]
+    #[must_use]
+    pub fn kv(&self) -> KVManager {
+        KVManager::new(self.ctx.clone())
     }
 
-    pub fn get_kv<'py>(&self, py: Python<'py>, bucket: String) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.get_key_value(bucket).await?))
-        })
-    }
-
-    pub fn update_kv<'py>(
-        &self,
-        py: Python<'py>,
-        config: &Bound<'py, KVConfig>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        let config = config.borrow().deref().clone().try_into()?;
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(KeyValue::new(js.update_key_value(config).await?))
-        })
-    }
-
-    pub fn delete_kv<'py>(
-        &self,
-        py: Python<'py>,
-        bucket: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(js.delete_key_value(bucket).await?.success)
-        })
-    }
-
-    pub fn create_stream<'py>(
-        &self,
-        py: Python<'py>,
-        config: StreamConfig,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(super::stream::Stream::new(
-                js.create_stream(async_nats::jetstream::stream::Config::try_from(config)?)
-                    .await?,
-            ))
-        })
-    }
-
-    pub fn get_stream<'py>(
-        &self,
-        py: Python<'py>,
-        name: String,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
-        natsrpy_future(py, async move {
-            let js = ctx.read().await;
-            Ok(super::stream::Stream::new(js.get_stream(name).await?))
-        })
+    #[getter]
+    #[must_use]
+    pub fn streams(&self) -> StreamsManager {
+        StreamsManager::new(self.ctx.clone())
     }
 }

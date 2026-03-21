@@ -8,6 +8,9 @@
 )]
 #![
     allow(
+        // Beacsue some types naming conventions are
+        // just different to the ones that rust have.
+        non_camel_case_types,
         // I don't care about this.
         clippy::module_name_repetitions,
         // Yo, the hell you should put
@@ -25,7 +28,7 @@ pub mod subscription;
 pub mod utils;
 
 #[pyo3::pymodule]
-pub mod _inner {
+pub mod _natsrpy_rs {
     use pyo3::{Bound, PyResult, types::PyModule};
 
     use crate::utils::py::PyModuleSubmoduleExt;

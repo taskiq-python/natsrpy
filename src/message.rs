@@ -3,7 +3,7 @@ use pyo3::{
     types::{PyBytes, PyDict},
 };
 
-use crate::{exceptions::rust_err::NatsrpyResult, utils::headers::NatsrpyHeadermapExt};
+use crate::{exceptions::rust_err::NatsrpyError, utils::headers::NatsrpyHeadermapExt};
 
 #[pyo3::pyclass(get_all, set_all)]
 #[derive(Debug)]
@@ -17,20 +17,24 @@ pub struct Message {
     pub length: usize,
 }
 
-impl Message {
-    pub fn from_nats_message(py: Python<'_>, message: async_nats::Message) -> NatsrpyResult<Self> {
-        let headers = match message.headers {
-            Some(headermap) => headermap.to_pydict(py)?,
-            None => PyDict::new(py).unbind(),
-        };
-        Ok(Self {
-            subject: message.subject.to_string(),
-            reply: message.reply.as_deref().map(ToString::to_string),
-            payload: PyBytes::new(py, &message.payload).unbind(),
-            headers,
-            status: message.status.map(Into::<u16>::into),
-            description: message.description,
-            length: message.length,
+impl TryFrom<async_nats::Message> for Message {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::Message) -> Result<Self, Self::Error> {
+        Python::attach(move |gil| {
+            let headers = match value.headers {
+                Some(headermap) => headermap.to_pydict(gil)?.unbind(),
+                None => PyDict::new(gil).unbind(),
+            };
+            Ok(Self {
+                subject: value.subject.to_string(),
+                reply: value.reply.as_deref().map(ToString::to_string),
+                payload: PyBytes::new(gil, &value.payload).unbind(),
+                headers,
+                status: value.status.map(Into::<u16>::into),
+                description: value.description,
+                length: value.length,
+            })
         })
     }
 }
