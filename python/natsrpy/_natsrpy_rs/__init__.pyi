@@ -20,8 +20,8 @@ class Nats:
         read_buffer_capacity: int = 65535,
         sender_capacity: int = 128,
         max_reconnects: int | None = None,
-        connection_timeout: timedelta = ...,
-        request_timeout: timedelta = ...,
+        connection_timeout: float | timedelta = ...,
+        request_timeout: float | timedelta = ...,
     ) -> None: ...
     async def startup(self) -> None: ...
     async def shutdown(self) -> None: ...

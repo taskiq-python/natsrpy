@@ -160,4 +160,5 @@ class PullConsumer:
         expires: timedelta | None = None,
         min_pending: int | None = None,
         min_ack_pending: int | None = None,
+        timeout: float | timedelta | None = None,
     ) -> list[JetStreamMessage]: ...
