@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from natsrpy._natsrpy_rs.js import JetStreamMessage
+
 class DeliverPolicy:
     ALL: DeliverPolicy
     LAST: DeliverPolicy
@@ -146,4 +148,16 @@ class PushConsumerConfig:
     ) -> None: ...
 
 class PushConsumer: ...
-class PullConsumer: ...
+
+class PullConsumer:
+    async def fetch(
+        self,
+        max_messages: int | None = None,
+        group: str | None = None,
+        priority: int | None = None,
+        max_bytes: int | None = None,
+        heartbeat: timedelta | None = None,
+        expires: timedelta | None = None,
+        min_pending: int | None = None,
+        min_ack_pending: int | None = None,
+    ) -> list[JetStreamMessage]: ...

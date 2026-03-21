@@ -817,7 +817,7 @@ impl StreamMessage {
         Ok(Self {
             subject: msg.subject.to_string(),
             payload: PyBytes::new(py, &msg.payload).unbind(),
-            headers: msg.headers.to_pydict(py)?,
+            headers: msg.headers.to_pydict(py)?.unbind(),
             sequence: msg.sequence,
             time: time.unbind(),
         })

@@ -23,7 +23,7 @@ impl TryFrom<async_nats::Message> for Message {
     fn try_from(value: async_nats::Message) -> Result<Self, Self::Error> {
         Python::attach(move |gil| {
             let headers = match value.headers {
-                Some(headermap) => headermap.to_pydict(gil)?,
+                Some(headermap) => headermap.to_pydict(gil)?.unbind(),
                 None => PyDict::new(gil).unbind(),
             };
             Ok(Self {

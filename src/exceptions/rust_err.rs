@@ -64,6 +64,8 @@ pub enum NatsrpyError {
     PullMessageError(#[from] async_nats::jetstream::consumer::pull::MessagesError),
     #[error(transparent)]
     PullConsumerError(#[from] async_nats::jetstream::stream::ConsumerError),
+    #[error(transparent)]
+    PullConsumerBatchError(#[from] async_nats::jetstream::consumer::pull::BatchError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {
