@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::NatsrpyResult,
-    utils::{futures::natsrpy_future_with_timeout, py_types::TimeoutValue},
+    utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
 };
 
 type NatsPullConsumer =
@@ -51,7 +51,7 @@ impl PullConsumer {
         expires: Option<Duration>,
         min_pending: Option<usize>,
         min_ack_pending: Option<usize>,
-        timeout: Option<TimeoutValue>,
+        timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.consumer.clone();
 

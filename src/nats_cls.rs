@@ -13,7 +13,7 @@ use crate::{
         futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
         natsrpy_future,
-        py_types::{SendableValue, TimeoutValue},
+        py_types::{SendableValue, TimeValue},
     },
 };
 
@@ -28,8 +28,8 @@ pub struct NatsCls {
     read_buffer_capacity: u16,
     sender_capacity: usize,
     max_reconnects: Option<usize>,
-    connection_timeout: TimeoutValue,
-    request_timeout: Option<TimeoutValue>,
+    connection_timeout: TimeValue,
+    request_timeout: Option<TimeValue>,
 }
 
 #[pyo3::pymethods]
@@ -45,8 +45,8 @@ impl NatsCls {
         read_buffer_capacity=65535,
         sender_capacity=128,
         max_reconnects=None,
-        connection_timeout=TimeoutValue::FloatSecs(5.0),
-        request_timeout=TimeoutValue::FloatSecs(10.0),
+        connection_timeout=TimeValue::FloatSecs(5.0),
+        request_timeout=TimeValue::FloatSecs(10.0),
     ))]
     fn __new__(
         addrs: Vec<String>,
@@ -57,8 +57,8 @@ impl NatsCls {
         read_buffer_capacity: u16,
         sender_capacity: usize,
         max_reconnects: Option<usize>,
-        connection_timeout: TimeoutValue,
-        request_timeout: Option<TimeoutValue>,
+        connection_timeout: TimeValue,
+        request_timeout: Option<TimeValue>,
     ) -> Self {
         Self {
             nats_session: Arc::new(RwLock::new(None)),

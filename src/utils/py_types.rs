@@ -44,21 +44,21 @@ impl From<SendableValue> for bytes::Bytes {
 }
 
 #[derive(Clone, Debug, Copy, PartialEq, PartialOrd)]
-pub enum TimeoutValue {
+pub enum TimeValue {
     Duration(Duration),
     FloatSecs(f32),
 }
 
-impl From<TimeoutValue> for Duration {
-    fn from(value: TimeoutValue) -> Self {
+impl From<TimeValue> for Duration {
+    fn from(value: TimeValue) -> Self {
         match value {
-            TimeoutValue::Duration(duration) => duration,
-            TimeoutValue::FloatSecs(fsecs) => Self::from_secs_f32(fsecs),
+            TimeValue::Duration(duration) => duration,
+            TimeValue::FloatSecs(fsecs) => Self::from_secs_f32(fsecs),
         }
     }
 }
 
-impl<'py> FromPyObject<'_, 'py> for TimeoutValue {
+impl<'py> FromPyObject<'_, 'py> for TimeValue {
     type Error = NatsrpyError;
 
     fn extract(obj: pyo3::Borrowed<'_, 'py, pyo3::PyAny>) -> Result<Self, Self::Error> {

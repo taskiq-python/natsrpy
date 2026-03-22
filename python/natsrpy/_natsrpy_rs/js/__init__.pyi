@@ -1,3 +1,4 @@
+from datetime import timedelta
 from typing import Any
 
 from .managers import KVManager, StreamsManager
@@ -26,4 +27,57 @@ class JetStreamMessage:
     def payload(self) -> bytes: ...
     @property
     def headers(self) -> dict[str, Any]: ...
-    async def ack(self) -> None: ...
+    async def ack(self, double: bool = False) -> None:
+        """
+        Acknowledge that a message was handled.
+
+        :param double: whether to wait for server response, defaults to False
+        """
+
+    async def nack(
+        self,
+        delay: float | timedelta | None = None,
+        double: bool = False,
+    ) -> None:
+        """
+        Negative acknowledgement.
+
+        Signals that the message will not be processed now
+        and processing can move onto the next message, NAK'd
+        message will be retried.
+
+        :param duration: time, defaults to None
+        :param double: whether to wait for server response, defaults to False
+        """
+
+    async def progress(self, double: bool = False) -> None:
+        """
+        Progress acknowledgement.
+
+        Singnals that the mesasge is being handled right now.
+        Sending this request before the AckWait will extend wait period
+        before redelivering a message.
+
+        :param double: whether to wait for server response, defaults to False
+        """
+
+    async def next(self, double: bool = False) -> None:
+        """
+        Next acknowledgement.
+
+        Only applies to pull consumers!
+        Acknowledges message processing and instructs server to send
+        delivery of the next message to the reply subject.
+
+        :param double: whether to wait for server response, defaults to False
+        """
+
+    async def term(self, double: bool = False) -> None:
+        """
+        Term acknowledgement.
+
+        Instructs server to stop redelivering message.
+        Useful to stop redelivering a message after multiple NACKs.
+
+        :param double: whether to wait for server response, defaults to False
+        """
