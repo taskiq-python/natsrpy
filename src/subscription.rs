@@ -1,13 +1,12 @@
 use futures_util::StreamExt;
-use pyo3::exceptions::PyStopAsyncIteration;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use pyo3::{Bound, PyAny, PyRef, Python};
 use tokio::sync::Mutex;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::futures::natsrpy_future_with_timeout,
+    utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
 };
 
 #[pyo3::pyclass]
@@ -34,14 +33,14 @@ impl Subscription {
     pub fn next<'py>(
         &self,
         py: Python<'py>,
-        timeout: Option<Duration>,
+        timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let Some(inner) = self.inner.clone() else {
             return Err(NatsrpyError::NotInitialized);
         };
         natsrpy_future_with_timeout(py, timeout, async move {
             let Some(message) = inner.lock().await.next().await else {
-                return Err(PyStopAsyncIteration::new_err("End of the stream.").into());
+                return Err(NatsrpyError::AsyncStopIteration);
             };
 
             crate::message::Message::try_from(message)

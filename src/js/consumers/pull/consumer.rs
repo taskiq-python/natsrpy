@@ -89,7 +89,7 @@ impl PullConsumer {
             let mut ret_messages = Vec::new();
             while let Some(msg) = messages.next().await {
                 let raw_msg = msg?;
-                ret_messages.push(crate::js::message::JetStreamMessage::from(raw_msg));
+                ret_messages.push(crate::js::message::JetStreamMessage::try_from(raw_msg)?);
             }
             Ok(ret_messages)
         })

@@ -1,4 +1,4 @@
-use pyo3::exceptions::{PyTimeoutError, PyTypeError};
+use pyo3::exceptions::{PyStopAsyncIteration, PyTimeoutError, PyTypeError};
 
 use crate::exceptions::py_err::{NatsrpyPublishError, NatsrpySessionError};
 
@@ -12,6 +12,8 @@ pub enum NatsrpyError {
     InvalidArgument(String),
     #[error("Session is not initialized. Call startup() first.")]
     NotInitialized,
+    #[error("The end of stream")]
+    AsyncStopIteration,
     #[error("Connection is closed or lost.")]
     Disconnected,
     #[error(transparent)]
@@ -66,12 +68,17 @@ pub enum NatsrpyError {
     PullConsumerError(#[from] async_nats::jetstream::stream::ConsumerError),
     #[error(transparent)]
     PullConsumerBatchError(#[from] async_nats::jetstream::consumer::pull::BatchError),
+    #[error(transparent)]
+    PushConsumerMessageError(#[from] async_nats::jetstream::consumer::push::MessagesError),
+    #[error(transparent)]
+    ConsumerStreamError(#[from] async_nats::jetstream::consumer::StreamError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {
     fn from(value: NatsrpyError) -> Self {
         match value {
             NatsrpyError::PublishError(_) => NatsrpyPublishError::new_err(value.to_string()),
+            NatsrpyError::AsyncStopIteration => PyStopAsyncIteration::new_err("End of the stream."),
             NatsrpyError::Timeout(_) => PyTimeoutError::new_err(value.to_string()),
             NatsrpyError::PyError(py_err) => py_err,
             NatsrpyError::InvalidArgument(descr) => PyTypeError::new_err(descr),
