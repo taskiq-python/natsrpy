@@ -17,12 +17,12 @@ pub struct Message {
     pub length: usize,
 }
 
-impl TryFrom<async_nats::Message> for Message {
+impl TryFrom<&async_nats::Message> for Message {
     type Error = NatsrpyError;
 
-    fn try_from(value: async_nats::Message) -> Result<Self, Self::Error> {
+    fn try_from(value: &async_nats::Message) -> Result<Self, Self::Error> {
         Python::attach(move |gil| {
-            let headers = match value.headers {
+            let headers = match &value.headers {
                 Some(headermap) => headermap.to_pydict(gil)?.unbind(),
                 None => PyDict::new(gil).unbind(),
             };
@@ -32,10 +32,18 @@ impl TryFrom<async_nats::Message> for Message {
                 payload: PyBytes::new(gil, &value.payload).unbind(),
                 headers,
                 status: value.status.map(Into::<u16>::into),
-                description: value.description,
+                description: value.description.clone(),
                 length: value.length,
             })
         })
+    }
+}
+
+impl TryFrom<async_nats::Message> for Message {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::Message) -> Result<Self, Self::Error> {
+        Self::try_from(&value)
     }
 }
 

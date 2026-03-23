@@ -1,6 +1,6 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
 use pyo3::{
-    Bound, PyAny, Python,
+    Bound, Py, PyAny, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use std::{sync::Arc, time::Duration};
@@ -197,16 +197,21 @@ impl NatsCls {
         })
     }
 
+    #[pyo3(signature=(subject, callback=None))]
     pub fn subscribe<'py>(
         &self,
         py: Python<'py>,
         subject: String,
+        callback: Option<Py<PyAny>>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Subscribing to '{subject}'");
         let session = self.nats_session.clone();
         natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
-                Ok(Subscription::new(session.subscribe(subject).await?))
+                Ok(Subscription::new(
+                    session.subscribe(subject).await?,
+                    callback,
+                )?)
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
