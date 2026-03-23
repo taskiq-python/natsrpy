@@ -9,8 +9,8 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct PushConsumerConfig {
     pub deliver_subject: String,
-    pub durable_name: Option<String>,
     pub name: Option<String>,
+    pub durable_name: Option<String>,
     pub description: Option<String>,
     pub deliver_group: Option<String>,
     pub deliver_policy: DeliverPolicy,
@@ -42,8 +42,8 @@ impl PushConsumerConfig {
     #[new]
     #[pyo3(signature=(
         deliver_subject,
-        durable_name=None,
         name=None,
+        durable_name=None,
         description=None,
         deliver_group=None,
         deliver_policy=None,
@@ -73,8 +73,8 @@ impl PushConsumerConfig {
     #[must_use]
     pub fn __new__(
         deliver_subject: String,
-        durable_name: Option<String>,
         name: Option<String>,
+        durable_name: Option<String>,
         description: Option<String>,
         deliver_group: Option<String>,
         deliver_policy: Option<DeliverPolicy>,

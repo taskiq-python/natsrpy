@@ -67,13 +67,15 @@ pub enum NatsrpyError {
     #[error(transparent)]
     PullMessageError(#[from] async_nats::jetstream::consumer::pull::MessagesError),
     #[error(transparent)]
-    PullConsumerError(#[from] async_nats::jetstream::stream::ConsumerError),
+    ConsumerError(#[from] async_nats::jetstream::stream::ConsumerError),
     #[error(transparent)]
     PullConsumerBatchError(#[from] async_nats::jetstream::consumer::pull::BatchError),
     #[error(transparent)]
     PushConsumerMessageError(#[from] async_nats::jetstream::consumer::push::MessagesError),
     #[error(transparent)]
     ConsumerStreamError(#[from] async_nats::jetstream::consumer::StreamError),
+    #[error(transparent)]
+    ConsumerUpdateError(#[from] async_nats::jetstream::stream::ConsumerUpdateError),
     #[error(transparent)]
     ObjectStoreError(#[from] async_nats::jetstream::context::ObjectStoreError),
     #[error(transparent)]

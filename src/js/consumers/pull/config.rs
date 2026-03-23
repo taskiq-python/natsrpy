@@ -8,8 +8,8 @@ use crate::{
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
 #[derive(Clone, Debug, Default)]
 pub struct PullConsumerConfig {
-    pub durable_name: Option<String>,
     pub name: Option<String>,
+    pub durable_name: Option<String>,
     pub description: Option<String>,
     pub deliver_policy: DeliverPolicy,
     pub delivery_start_sequence: Option<u64>,
@@ -42,8 +42,8 @@ pub struct PullConsumerConfig {
 impl PullConsumerConfig {
     #[new]
     #[pyo3(signature=(
-        durable_name=None,
         name=None,
+        durable_name=None,
         description=None,
         deliver_policy=None,
         delivery_start_sequence=None,
@@ -73,8 +73,8 @@ impl PullConsumerConfig {
     ))]
     #[must_use]
     pub fn __new__(
-        durable_name: Option<String>,
         name: Option<String>,
+        durable_name: Option<String>,
         description: Option<String>,
         deliver_policy: Option<DeliverPolicy>,
         delivery_start_sequence: Option<u64>,
@@ -103,8 +103,8 @@ impl PullConsumerConfig {
         pause_until: Option<i64>,
     ) -> Self {
         let mut conf = Self {
-            durable_name,
             name,
+            durable_name,
             description,
             delivery_start_sequence,
             delivery_start_time,
