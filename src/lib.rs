@@ -24,7 +24,7 @@ pub mod exceptions;
 pub mod js;
 pub mod message;
 pub mod nats_cls;
-pub mod subscription;
+pub mod subscriptions;
 pub mod utils;
 
 #[pyo3::pymodule]
@@ -38,7 +38,7 @@ pub mod _natsrpy_rs {
     #[pymodule_export]
     use super::nats_cls::NatsCls;
     #[pymodule_export]
-    use super::subscription::Subscription;
+    use super::subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription};
 
     #[pymodule_export]
     use super::js::pymod as js;

@@ -1,6 +1,6 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
 use pyo3::{
-    Bound, Py, PyAny, Python,
+    Bound, IntoPyObjectExt, Py, PyAny, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use std::{sync::Arc, time::Duration};
@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    subscription::Subscription,
+    subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription},
     utils::{
         futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
@@ -208,10 +208,13 @@ impl NatsCls {
         let session = self.nats_session.clone();
         natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
-                Ok(Subscription::new(
-                    session.subscribe(subject).await?,
-                    callback,
-                )?)
+                if let Some(cb) = callback {
+                    let sub = CallbackSubscription::new(session.subscribe(subject).await?, cb)?;
+                    Ok(Python::attach(|gil| sub.into_py_any(gil))?)
+                } else {
+                    let sub = IteratorSubscription::new(session.subscribe(subject).await?);
+                    Ok(Python::attach(|gil| sub.into_py_any(gil))?)
+                }
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
