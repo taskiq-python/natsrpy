@@ -10,6 +10,7 @@ from natsrpy.js.consumers import (
     ReplayPolicy,
 )
 from natsrpy.js.kv import KeyValue, KVConfig
+from natsrpy.js.object_store import ObjectStore, ObjectStoreConfig
 from natsrpy.js.stream import (
     Compression,
     ConsumerLimits,
@@ -37,6 +38,8 @@ __all__ = [
     "JetStream",
     "KVConfig",
     "KeyValue",
+    "ObjectStore",
+    "ObjectStoreConfig",
     "PersistenceMode",
     "Placement",
     "PriorityPolicy",

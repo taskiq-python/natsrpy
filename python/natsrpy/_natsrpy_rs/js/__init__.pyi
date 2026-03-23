@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
-from .managers import KVManager, StreamsManager
+from .managers import KVManager, ObjectStoreManager, StreamsManager
 
 class JetStream:
     async def publish(
@@ -17,6 +17,8 @@ class JetStream:
     def kv(self) -> KVManager: ...
     @property
     def streams(self) -> StreamsManager: ...
+    @property
+    def object_store(self) -> ObjectStoreManager: ...
 
 class JetStreamMessage:
     @property
