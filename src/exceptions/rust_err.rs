@@ -6,6 +6,8 @@ pub type NatsrpyResult<T> = Result<T, NatsrpyError>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum NatsrpyError {
+    #[error(transparent)]
+    StdIOError(#[from] std::io::Error),
     #[error("NATS session error: {0}")]
     SessionError(String),
     #[error("Invalid arguemnt: {0}")]
@@ -72,6 +74,14 @@ pub enum NatsrpyError {
     PushConsumerMessageError(#[from] async_nats::jetstream::consumer::push::MessagesError),
     #[error(transparent)]
     ConsumerStreamError(#[from] async_nats::jetstream::consumer::StreamError),
+    #[error(transparent)]
+    ObjectStoreError(#[from] async_nats::jetstream::context::ObjectStoreError),
+    #[error(transparent)]
+    ObjectStoreGetError(#[from] async_nats::jetstream::object_store::GetError),
+    #[error(transparent)]
+    ObjectStorePutError(#[from] async_nats::jetstream::object_store::PutError),
+    #[error(transparent)]
+    ObjectStoreDeleteError(#[from] async_nats::jetstream::object_store::DeleteError),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {

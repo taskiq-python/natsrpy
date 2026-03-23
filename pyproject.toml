@@ -14,6 +14,9 @@ classifiers = [
   "Topic :: System :: Networking",
 ]
 dynamic = ["version"]
+dependencies = [
+    "typing-extensions>=4.14.0",
+]
 
 [[project.authors]]
 name = "Pavel Kirilin"

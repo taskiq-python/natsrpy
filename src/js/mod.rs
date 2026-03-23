@@ -3,6 +3,7 @@ pub mod jetstream;
 pub mod kv;
 pub mod managers;
 pub mod message;
+pub mod object_store;
 pub mod stream;
 
 #[pyo3::pymodule(submodule, name = "js")]
@@ -20,6 +21,8 @@ pub mod pymod {
     pub use super::kv::pymod as kv;
     #[pymodule_export]
     pub use super::managers::pymod as managers;
+    #[pymodule_export]
+    pub use super::object_store::pymod as object_store;
     #[pymodule_export]
     pub use super::stream::pymod as stream;
 }

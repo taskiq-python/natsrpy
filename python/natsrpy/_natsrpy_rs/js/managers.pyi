@@ -7,6 +7,7 @@ from .consumers import (
     PushConsumerConfig,
 )
 from .kv import KeyValue, KVConfig
+from .object_store import ObjectStore, ObjectStoreConfig
 from .stream import Stream, StreamConfig
 
 class StreamsManager:
@@ -28,3 +29,8 @@ class ConsumersManager:
     async def create(self, config: PullConsumerConfig) -> PullConsumer: ...
     @overload
     async def create(self, config: PushConsumerConfig) -> PushConsumer: ...
+
+class ObjectStoreManager:
+    async def create(self, config: ObjectStoreConfig) -> ObjectStore: ...
+    async def get(self, bucket: str) -> ObjectStore: ...
+    async def delete(self, bucket: str) -> None: ...
