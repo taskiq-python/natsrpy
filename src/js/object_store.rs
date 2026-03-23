@@ -108,6 +108,7 @@ impl ObjectStore {
         chunk_size: Option<usize>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx_guard = self.object_store.clone();
+        let arc_writer = Arc::new(writer);
         natsrpy_future(py, async move {
             let mut object = ctx_guard.read().await.get(name).await?;
             let mut buf =
@@ -117,7 +118,18 @@ impl ObjectStore {
                 if read == 0 {
                     break;
                 }
-                Python::attach(|gil| writer.call_method1(gil, "write", (&buf[..read],)))?;
+                // Buffer is cheap to clone. Since
+                // it copies only pointer to memory.
+                let to_write = buf.clone();
+                // Writer is wrapped into Arc, so it's also
+                // cheap to clone. So its fine.
+                let writer_ref = arc_writer.clone();
+                tokio::task::spawn_blocking(move || {
+                    Python::attach(|gil| {
+                        writer_ref.call_method1(gil, "write", (&to_write[..read],))
+                    })
+                })
+                .await??;
                 buf.clear();
             }
             Ok(())

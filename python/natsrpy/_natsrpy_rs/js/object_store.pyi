@@ -31,7 +31,7 @@ class ObjectStore:
         self,
         name: str,
         writer: Writer[bytes],
-        buf_size: int | None = None,
+        chunk_size: int | None = 24576,  # 24MB
     ) -> None: ...
     async def put(
         self,
