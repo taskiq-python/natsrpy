@@ -1,13 +1,13 @@
 use pyo3::{
     Py,
-    types::{PyBytes, PyDateTime, PyDict, PyTzInfo},
+    types::{PyBytes, PyDateTime, PyDict},
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::managers::consumers::ConsumersManager,
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future},
+    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::ToPyDate},
 };
 use pyo3::{Bound, PyAny, Python};
 use tokio::sync::RwLock;
@@ -801,25 +801,12 @@ impl StreamMessage {
         py: Python,
         msg: &async_nats::jetstream::message::StreamMessage,
     ) -> NatsrpyResult<Self> {
-        let time = msg.time.to_utc();
-        let tz_info = PyTzInfo::utc(py)?;
-        let time = PyDateTime::new(
-            py,
-            time.year(),
-            time.month().into(),
-            time.day(),
-            time.hour(),
-            time.minute(),
-            time.second(),
-            time.microsecond(),
-            Some(&*tz_info),
-        )?;
         Ok(Self {
             subject: msg.subject.to_string(),
             payload: PyBytes::new(py, &msg.payload).unbind(),
             headers: msg.headers.to_pydict(py)?.unbind(),
             sequence: msg.sequence,
-            time: time.unbind(),
+            time: msg.time.to_py_date(py)?.unbind(),
         })
     }
 }

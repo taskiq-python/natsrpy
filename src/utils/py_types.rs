@@ -1,8 +1,8 @@
 use std::time::Duration;
 
 use pyo3::{
-    FromPyObject,
-    types::{PyBytes, PyBytesMethods},
+    Bound, FromPyObject, PyResult, Python,
+    types::{PyBytes, PyBytesMethods, PyDateTime, PyTzInfo},
 };
 
 use crate::exceptions::rust_err::NatsrpyError;
@@ -72,5 +72,27 @@ impl<'py> FromPyObject<'_, 'py> for TimeValue {
                 "As timeouts only float or timedelta are accepted.",
             )))
         }
+    }
+}
+
+pub trait ToPyDate {
+    fn to_py_date<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDateTime>>;
+}
+
+impl ToPyDate for time::OffsetDateTime {
+    fn to_py_date<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDateTime>> {
+        let time = self.to_utc();
+        let tz_info = PyTzInfo::utc(py)?;
+        PyDateTime::new(
+            py,
+            time.year(),
+            time.month().into(),
+            time.day(),
+            time.hour(),
+            time.minute(),
+            time.second(),
+            time.microsecond(),
+            Some(&*tz_info),
+        )
     }
 }
