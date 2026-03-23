@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
+    utils::{futures::natsrpy_future_with_timeout, natsrpy_future, py_types::TimeValue},
 };
 
 #[pyo3::pyclass]
@@ -36,7 +36,7 @@ impl Subscription {
         timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let Some(inner) = self.inner.clone() else {
-            return Err(NatsrpyError::NotInitialized);
+            unreachable!("Subscription used after del")
         };
         natsrpy_future_with_timeout(py, timeout, async move {
             let Some(message) = inner.lock().await.next().await else {
@@ -49,6 +49,35 @@ impl Subscription {
 
     pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         self.next(py, None)
+    }
+
+    #[pyo3(signature=(limit=None))]
+    pub fn unsubscribe<'py>(
+        &self,
+        py: Python<'py>,
+        limit: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let Some(inner) = self.inner.clone() else {
+            unreachable!("Subscription used after del")
+        };
+        natsrpy_future(py, async move {
+            if let Some(limit) = limit {
+                inner.lock().await.unsubscribe_after(limit).await?;
+            } else {
+                inner.lock().await.unsubscribe().await?;
+            }
+            Ok(())
+        })
+    }
+
+    pub fn drain<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let Some(inner) = self.inner.clone() else {
+            unreachable!("Subscription used after del")
+        };
+        natsrpy_future(py, async move {
+            inner.lock().await.drain().await?;
+            Ok(())
+        })
     }
 }
 
