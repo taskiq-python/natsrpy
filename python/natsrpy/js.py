@@ -1,5 +1,5 @@
-from natsrpy._natsrpy_rs.js import JetStream
-from natsrpy.js.consumers import (
+from ._natsrpy_rs.js import JetStream
+from ._natsrpy_rs.js.consumers import (
     AckPolicy,
     DeliverPolicy,
     PriorityPolicy,
@@ -9,9 +9,9 @@ from natsrpy.js.consumers import (
     PushConsumerConfig,
     ReplayPolicy,
 )
-from natsrpy.js.kv import KeyValue, KVConfig
-from natsrpy.js.object_store import ObjectStore, ObjectStoreConfig
-from natsrpy.js.stream import (
+from ._natsrpy_rs.js.kv import KeyValue, KVConfig
+from ._natsrpy_rs.js.object_store import ObjectStore, ObjectStoreConfig
+from ._natsrpy_rs.js.stream import (
     Compression,
     ConsumerLimits,
     DiscardPolicy,

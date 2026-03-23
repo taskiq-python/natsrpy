@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use pyo3::{Bound, FromPyObject, IntoPyObjectExt, PyAny, Python};
 use tokio::sync::RwLock;
@@ -6,7 +6,7 @@ use tokio::sync::RwLock;
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::consumers::{self, pull::PullConsumer, push::PushConsumer},
-    utils::natsrpy_future,
+    utils::{natsrpy_future, py_types::TimeValue},
 };
 
 #[pyo3::pyclass]
@@ -78,12 +78,65 @@ impl ConsumersManager {
         })
     }
 
-    pub fn get<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn update<'py>(
+        &self,
+        py: Python<'py>,
+        config: ConsumerConfigs,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            match config {
+                ConsumerConfigs::Pull(config) => {
+                    let consumer = PullConsumer::new(
+                        ctx.read().await.update_consumer(config.try_into()?).await?,
+                    );
+                    Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
+                }
+                ConsumerConfigs::Push(config) => {
+                    let consumer = PushConsumer::new(
+                        ctx.read().await.update_consumer(config.try_into()?).await?,
+                    );
+                    Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
+                }
+            }
+        })
+    }
+
+    pub fn get_pull<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future(py, async move {
             Ok(consumers::pull::consumer::PullConsumer::new(
                 ctx.read().await.get_consumer(&name).await?,
             ))
+        })
+    }
+
+    pub fn get_push<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            Ok(consumers::push::consumer::PushConsumer::new(
+                ctx.read().await.get_consumer(&name).await?,
+            ))
+        })
+    }
+
+    pub fn pause<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+        delay: TimeValue,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        let untill = time::OffsetDateTime::now_utc() + Duration::from(delay);
+        natsrpy_future(py, async move {
+            Ok(ctx.read().await.pause_consumer(&name, untill).await?.paused)
+        })
+    }
+
+    pub fn resume<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            Ok(ctx.read().await.resume_consumer(&name).await?.paused)
         })
     }
 }

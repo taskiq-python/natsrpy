@@ -26,8 +26,8 @@ class PriorityPolicy:
     PRIORITIZED: PriorityPolicy
 
 class PullConsumerConfig:
-    durable_name: str | None
     name: str | None
+    durable_name: str | None
     description: str | None
     deliver_policy: DeliverPolicy
     delivery_start_sequence: int | None
@@ -57,8 +57,8 @@ class PullConsumerConfig:
 
     def __init__(
         self,
-        durable_name: str | None = None,
         name: str | None = None,
+        durable_name: str | None = None,
         description: str | None = None,
         deliver_policy: DeliverPolicy | None = None,
         delivery_start_sequence: int | None = None,
@@ -89,8 +89,8 @@ class PullConsumerConfig:
 
 class PushConsumerConfig:
     deliver_subject: str
-    durable_name: str | None
     name: str | None
+    durable_name: str | None
     description: str | None
     deliver_group: str | None
     deliver_policy: DeliverPolicy
@@ -119,8 +119,8 @@ class PushConsumerConfig:
     def __init__(
         self,
         deliver_subject: str,
-        durable_name: str | None = None,
         name: str | None = None,
+        durable_name: str | None = None,
         description: str | None = None,
         deliver_group: str | None = None,
         deliver_policy: DeliverPolicy | None = None,
