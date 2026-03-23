@@ -1,14 +1,14 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
 use pyo3::{
-    Bound, PyAny, PyResult, Python,
+    Bound, IntoPyObjectExt, Py, PyAny, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
 use crate::{
-    exceptions::rust_err::NatsrpyError,
-    subscription::Subscription,
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription},
     utils::{
         futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
@@ -75,7 +75,7 @@ impl NatsCls {
         }
     }
 
-    pub fn startup<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    pub fn startup<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let mut conn_opts = async_nats::ConnectOptions::new();
         if let Some((username, passwd)) = &self.user_and_pass {
             conn_opts = conn_opts.user_and_password(username.clone(), passwd.clone());
@@ -100,23 +100,19 @@ impl NatsCls {
         let session = self.nats_session.clone();
         let address = self.addr.clone();
         let timeout = self.connection_timeout;
-        return Ok(natsrpy_future_with_timeout(
-            py,
-            Some(timeout),
-            async move {
-                if session.read().await.is_some() {
-                    return Err(NatsrpyError::SessionError(
-                        "NATS session already exists".to_string(),
-                    ));
-                }
-                // Scoping for early-dropping of a guard.
-                {
-                    let mut sesion_guard = session.write().await;
-                    *sesion_guard = Some(conn_opts.connect(address).await?);
-                }
-                Ok(())
-            },
-        )?);
+        natsrpy_future_with_timeout(py, Some(timeout), async move {
+            if session.read().await.is_some() {
+                return Err(NatsrpyError::SessionError(
+                    "NATS session already exists".to_string(),
+                ));
+            }
+            // Scoping for early-dropping of a guard.
+            {
+                let mut sesion_guard = session.write().await;
+                *sesion_guard = Some(conn_opts.connect(address).await?);
+            }
+            Ok(())
+        })
     }
 
     #[pyo3(signature = (subject, payload, *, headers=None, reply=None, err_on_disconnect = false))]
@@ -128,14 +124,14 @@ impl NatsCls {
         headers: Option<Bound<PyDict>>,
         reply: Option<String>,
         err_on_disconnect: bool,
-    ) -> PyResult<Bound<'py, PyAny>> {
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         log::info!("Payload: {payload:?}");
         let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
                 if err_on_disconnect
                     && session.connection_state() == async_nats::connection::State::Disconnected
@@ -154,7 +150,7 @@ impl NatsCls {
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
-        })?)
+        })
     }
 
     #[pyo3(signature = (subject, payload, *, headers=None, inbox = None, timeout=None))]
@@ -166,13 +162,13 @@ impl NatsCls {
         headers: Option<Bound<PyDict>>,
         inbox: Option<String>,
         timeout: Option<Duration>,
-    ) -> PyResult<Bound<'py, PyAny>> {
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         let data = payload.map(|inner| bytes::Bytes::from(inner.as_bytes().to_vec()));
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
                 let request = async_nats::Request {
                     payload: data,
@@ -185,32 +181,44 @@ impl NatsCls {
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
-        })?)
+        })
     }
 
-    pub fn drain<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    pub fn drain<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Draining NATS session");
         let session = self.nats_session.clone();
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             if let Some(session) = session.write().await.as_ref() {
                 session.drain().await?;
                 Ok(())
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
-        })?)
+        })
     }
 
-    pub fn subscribe<'py>(&self, py: Python<'py>, subject: String) -> PyResult<Bound<'py, PyAny>> {
+    #[pyo3(signature=(subject, callback=None))]
+    pub fn subscribe<'py>(
+        &self,
+        py: Python<'py>,
+        subject: String,
+        callback: Option<Py<PyAny>>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Subscribing to '{subject}'");
         let session = self.nats_session.clone();
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
-                Ok(Subscription::new(session.subscribe(subject).await?))
+                if let Some(cb) = callback {
+                    let sub = CallbackSubscription::new(session.subscribe(subject).await?, cb)?;
+                    Ok(Python::attach(|gil| sub.into_py_any(gil))?)
+                } else {
+                    let sub = IteratorSubscription::new(session.subscribe(subject).await?);
+                    Ok(Python::attach(|gil| sub.into_py_any(gil))?)
+                }
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
-        })?)
+        })
     }
 
     #[pyo3(signature = (
@@ -233,10 +241,10 @@ impl NatsCls {
         concurrency_limit: Option<usize>,
         max_ack_inflight: Option<usize>,
         backpressure_on_inflight: Option<bool>,
-    ) -> PyResult<Bound<'py, PyAny>> {
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Creating JetStream context");
         let session = self.nats_session.clone();
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             let mut builder =
                 async_nats::jetstream::ContextBuilder::new().concurrency_limit(concurrency_limit);
             if let Some(timeout) = ack_timeout {
@@ -269,13 +277,13 @@ impl NatsCls {
                     Ok(crate::js::jetstream::JetStream::new(js))
                 },
             )
-        })?)
+        })
     }
 
-    pub fn shutdown<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    pub fn shutdown<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Closing nats session");
         let session = self.nats_session.clone();
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             let mut write_guard = session.write().await;
             let Some(session) = write_guard.as_ref() else {
                 return Err(NatsrpyError::NotInitialized);
@@ -284,20 +292,20 @@ impl NatsCls {
             *write_guard = None;
             drop(write_guard);
             Ok(())
-        })?)
+        })
     }
 
-    pub fn flush<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+    pub fn flush<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Flushing streams");
         let session = self.nats_session.clone();
-        Ok(natsrpy_future(py, async move {
+        natsrpy_future(py, async move {
             if let Some(session) = session.write().await.as_ref() {
                 session.flush().await?;
                 Ok(())
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
-        })?)
+        })
     }
 }
 

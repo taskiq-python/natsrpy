@@ -41,6 +41,8 @@ pub enum NatsrpyError {
     #[error(transparent)]
     SubscribeError(#[from] async_nats::SubscribeError),
     #[error(transparent)]
+    UnsubscribeError(#[from] async_nats::UnsubscribeError),
+    #[error(transparent)]
     KeyValueError(#[from] async_nats::jetstream::context::KeyValueError),
     #[error(transparent)]
     CreateKeyValueError(#[from] async_nats::jetstream::context::CreateKeyValueError),

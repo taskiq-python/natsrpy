@@ -1,18 +1,15 @@
-use futures_util::StreamExt;
 use std::sync::Arc;
 
-use pyo3::{Bound, Py, PyAny, PyRef, Python};
+use futures_util::StreamExt;
+use pyo3::{Bound, Py, PyAny, Python};
 use tokio::sync::Mutex;
 
-use crate::{
-    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    utils::{futures::natsrpy_future_with_timeout, natsrpy_future, py_types::TimeValue},
-};
+use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
 
 #[pyo3::pyclass]
-pub struct Subscription {
+pub struct CallbackSubscription {
     inner: Option<Arc<Mutex<async_nats::Subscriber>>>,
-    reading_task: Option<tokio::task::AbortHandle>,
+    reading_task: tokio::task::AbortHandle,
 }
 
 async fn process_message(message: async_nats::message::Message, py_callback: Py<PyAny>) {
@@ -45,19 +42,16 @@ async fn start_py_sub(
     }
 }
 
-impl Subscription {
-    pub fn new(sub: async_nats::Subscriber, callback: Option<Py<PyAny>>) -> NatsrpyResult<Self> {
+impl CallbackSubscription {
+    pub fn new(sub: async_nats::Subscriber, callback: Py<PyAny>) -> NatsrpyResult<Self> {
         let sub = Arc::new(Mutex::new(sub));
         let cb_sub = sub.clone();
         let task_locals = Python::attach(pyo3_async_runtimes::tokio::get_current_locals)?;
-        let task_handle = callback.map(move |cb| {
-            tokio::task::spawn(pyo3_async_runtimes::tokio::scope(
-                task_locals.clone(),
-                start_py_sub(cb_sub, cb, task_locals),
-            ))
-            .abort_handle()
-        });
-
+        let task_handle = tokio::task::spawn(pyo3_async_runtimes::tokio::scope(
+            task_locals.clone(),
+            start_py_sub(cb_sub, callback, task_locals),
+        ))
+        .abort_handle();
         Ok(Self {
             inner: Some(sub),
             reading_task: task_handle,
@@ -66,37 +60,7 @@ impl Subscription {
 }
 
 #[pyo3::pymethods]
-impl Subscription {
-    #[must_use]
-    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
-        slf
-    }
-
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let Some(inner) = self.inner.clone() else {
-            unreachable!("Subscription used after del")
-        };
-        if self.reading_task.is_some() {
-            log::warn!(
-                "Callback is set. Getting messages from this subscription might produce unpredictable results."
-            );
-        }
-        natsrpy_future_with_timeout(py, timeout, async move {
-            let Some(message) = inner.lock().await.next().await else {
-                return Err(NatsrpyError::AsyncStopIteration);
-            };
-            crate::message::Message::try_from(message)
-        })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
-    }
-
+impl CallbackSubscription {
     #[pyo3(signature=(limit=None))]
     pub fn unsubscribe<'py>(
         &self,
@@ -138,13 +102,11 @@ impl Subscription {
 /// but leave self intouch. That is exactly why we have
 /// Option<Arc<...>>. So we can just assign it to None
 /// and it will perform a drop.
-impl Drop for Subscription {
+impl Drop for CallbackSubscription {
     fn drop(&mut self) {
         pyo3_async_runtimes::tokio::get_runtime().block_on(async move {
             self.inner = None;
-            if let Some(reading) = self.reading_task.take() {
-                reading.abort();
-            }
+            self.reading_task.abort();
         });
     }
 }
