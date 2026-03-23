@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_nats::HeaderMap;
-use pyo3::{Bound, FromPyObject, Py, PyAny, Python, types::PyDict};
+use pyo3::{Bound, Py, PyAny, Python, types::PyDict};
 use tokio::{io::AsyncReadExt, sync::RwLock};
 
 use crate::{
