@@ -1,10 +1,12 @@
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
-from typing import Any, overload
+from typing import Any, final, overload
 
 from natsrpy._natsrpy_rs.js import JetStream
 from natsrpy._natsrpy_rs.message import Message
+from typing_extensions import Self
 
+@final
 class IteratorSubscription:
     def __aiter__(self) -> IteratorSubscription: ...
     async def __anext__(self) -> Message: ...
@@ -12,13 +14,15 @@ class IteratorSubscription:
     async def unsubscribe(self, limit: int | None = None) -> None: ...
     async def drain(self) -> None: ...
 
+@final
 class CallbackSubscription:
     async def unsubscribe(self, limit: int | None = None) -> None: ...
     async def drain(self) -> None: ...
 
+@final
 class Nats:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         /,
         addrs: list[str] = ["nats://localhost:4222"],
         user_and_pass: tuple[str, str] | None = None,
@@ -30,7 +34,7 @@ class Nats:
         max_reconnects: int | None = None,
         connection_timeout: float | timedelta = ...,
         request_timeout: float | timedelta = ...,
-    ) -> None: ...
+    ) -> Self: ...
     async def startup(self) -> None: ...
     async def shutdown(self) -> None: ...
     async def publish(

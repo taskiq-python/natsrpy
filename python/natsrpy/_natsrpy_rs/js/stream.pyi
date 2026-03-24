@@ -1,6 +1,8 @@
 from datetime import datetime, timedelta
 from typing import Any
 
+from typing_extensions import Self
+
 from .managers import ConsumersManager
 
 class StorageType:
@@ -28,27 +30,31 @@ class ConsumerLimits:
     inactive_threshold: timedelta
     max_ack_pending: int
 
-    def __init__(self, inactive_threshold: timedelta, max_ack_pending: int) -> None: ...
+    def __new__(
+        cls,
+        inactive_threshold: timedelta,
+        max_ack_pending: int,
+    ) -> Self: ...
 
 class External:
     api_prefix: str
     delivery_prefix: str | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         api_prefix: str,
         delivery_prefix: str | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class SubjectTransform:
     source: str
     destination: str
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         source: str,
         destination: str,
-    ) -> None: ...
+    ) -> Self: ...
 
 class Source:
     name: str
@@ -59,8 +65,8 @@ class Source:
     domain: str | None = None
     subject_transforms: SubjectTransform | None = None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str,
         filter_subject: str | None = None,
         external: External | None = None,
@@ -68,29 +74,29 @@ class Source:
         start_time: int | None = None,
         domain: str | None = None,
         subject_transforms: SubjectTransform | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class Placement:
     cluster: str | None
     tags: list[str] | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         cluster: str | None = None,
         tags: list[str] | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class Republish:
     source: str
     destination: str
     headers_only: bool
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         source: str,
         destination: str,
         headers_only: bool,
-    ) -> None: ...
+    ) -> Self: ...
 
 class StreamConfig:
     name: str
@@ -133,8 +139,8 @@ class StreamConfig:
     allow_message_schedules: bool | None
     allow_message_counter: bool | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str,
         subjects: list[str],
         max_bytes: int | None = None,
@@ -174,7 +180,7 @@ class StreamConfig:
         allow_atomic_publish: bool | None = None,
         allow_message_schedules: bool | None = None,
         allow_message_counter: bool | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class StreamMessage:
     subject: str

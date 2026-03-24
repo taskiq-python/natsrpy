@@ -25,6 +25,7 @@ email = "s3riussan@gmail.com"
 [dependency-groups]
 dev = [
   "anyio>=4,<5",
+  "mypy>=1.19.1,<2",
   "pytest>=9,<10",
   "pytest-xdist>=3,<4",
 ]

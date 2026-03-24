@@ -1,4 +1,5 @@
 from natsrpy._natsrpy_rs.js.stream import Placement, Republish, Source, StorageType
+from typing_extensions import Self
 
 class KVConfig:
     """
@@ -23,8 +24,8 @@ class KVConfig:
     placement: Placement | None
     limit_markers: float | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         bucket: str,
         description: str | None = None,
         max_value_size: int | None = None,
@@ -40,7 +41,7 @@ class KVConfig:
         compression: bool | None = None,
         placement: Placement | None = None,
         limit_markers: float | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class KeyValue:
     @property

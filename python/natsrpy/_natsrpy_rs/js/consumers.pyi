@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from natsrpy._natsrpy_rs.js import JetStreamMessage
+from typing_extensions import Self
 
 class DeliverPolicy:
     ALL: DeliverPolicy
@@ -55,8 +56,8 @@ class PullConsumerConfig:
     priority_groups: list[str]
     pause_until: int | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str | None = None,
         durable_name: str | None = None,
         description: str | None = None,
@@ -85,7 +86,7 @@ class PullConsumerConfig:
         priority_policy: PriorityPolicy | None = None,
         priority_groups: list[str] | None = None,
         pause_until: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class PushConsumerConfig:
     deliver_subject: str
@@ -116,8 +117,8 @@ class PushConsumerConfig:
     inactive_threshold: timedelta
     pause_until: int | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         deliver_subject: str,
         name: str | None = None,
         durable_name: str | None = None,
@@ -145,7 +146,7 @@ class PushConsumerConfig:
         backoff: list[timedelta] | None = None,
         inactive_threshold: timedelta | None = None,
         pause_until: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class MessagesIterator:
     def __aiter__(self) -> MessagesIterator: ...

@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from typing_extensions import Writer
+from typing_extensions import Self, Writer
 
 from .stream import Placement, StorageType
 
@@ -14,8 +14,8 @@ class ObjectStoreConfig:
     compression: bool
     placement: Placement | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         bucket: str,
         description: str | None = None,
         max_age: float | timedelta | None = None,
@@ -24,7 +24,7 @@ class ObjectStoreConfig:
         num_replicas: int | None = None,
         compression: bool | None = None,
         placement: Placement | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
 class ObjectStore:
     async def get(
