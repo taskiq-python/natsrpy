@@ -2,9 +2,35 @@ from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any, final, overload
 
-from natsrpy._natsrpy_rs.js import JetStream
-from natsrpy._natsrpy_rs.message import Message
 from typing_extensions import Self
+
+from . import js
+
+@final
+class Message:
+    """
+    Simple NATS message.
+
+    Attributes:
+        subject: subject where message was published
+        reply: subject where reply should be sent, if any
+        payload: message payload
+        headers: dictionary of message headers,
+            every value can be a simple value or a list.
+        status: status is used for reply messages to indicate the status of the reply.
+            It is None for regular messages.
+        description: message description is used for reply messages to
+            provide additional information about the status.
+        length: a length of the message payload in bytes.
+    """
+
+    subject: str
+    reply: str | None
+    payload: bytes
+    headers: dict[str, Any]
+    status: int | None
+    description: str | None
+    length: int
 
 @final
 class IteratorSubscription:
@@ -69,6 +95,6 @@ class Nats:
         subject: str,
         callback: None = None,
     ) -> IteratorSubscription: ...
-    async def jetstream(self) -> JetStream: ...
+    async def jetstream(self) -> js.JetStream: ...
 
-__all__ = ["CallbackSubscription", "IteratorSubscription", "Message", "Nats"]
+__all__ = ["CallbackSubscription", "IteratorSubscription", "Message", "Nats", "js"]

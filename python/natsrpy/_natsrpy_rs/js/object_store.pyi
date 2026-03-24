@@ -1,9 +1,16 @@
 from datetime import timedelta
+from typing import final
 
 from typing_extensions import Self, Writer
 
 from .stream import Placement, StorageType
 
+__all__ = [
+    "ObjectStore",
+    "ObjectStoreConfig",
+]
+
+@final
 class ObjectStoreConfig:
     bucket: str
     description: str | None
@@ -26,18 +33,19 @@ class ObjectStoreConfig:
         placement: Placement | None = None,
     ) -> Self: ...
 
+@final
 class ObjectStore:
     async def get(
         self,
         name: str,
         writer: Writer[bytes],
-        chunk_size: int | None = 24576,  # 24MB
+        chunk_size: int | None = 24576,
     ) -> None: ...
     async def put(
         self,
         name: str,
         value: bytes | str,
-        chunk_size: int = 24576,  # 24MB
+        chunk_size: int = 24576,
         description: str | None = None,
         headers: dict[str, str | list[str]] | None = None,
         metadata: dict[str, str] | None = None,

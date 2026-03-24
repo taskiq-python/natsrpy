@@ -1,8 +1,21 @@
 from datetime import datetime, timedelta
-from typing import Any, Literal, overload
+from typing import Any, Literal, final, overload
 
+from . import consumers, kv, managers, object_store, stream
 from .managers import KVManager, ObjectStoreManager, StreamsManager
 
+__all__ = [
+    "JetStream",
+    "JetStreamMessage",
+    "Publication",
+    "consumers",
+    "kv",
+    "managers",
+    "object_store",
+    "stream",
+]
+
+@final
 class Publication:
     stream: str
     sequence: int
@@ -10,6 +23,7 @@ class Publication:
     duplicate: bool
     value: str | None
 
+@final
 class JetStream:
     @overload
     async def publish(
@@ -48,6 +62,7 @@ class JetStream:
     @property
     def object_store(self) -> ObjectStoreManager: ...
 
+@final
 class JetStreamMessage:
     @property
     def subject(self) -> str: ...

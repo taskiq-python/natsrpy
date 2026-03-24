@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import overload
+from typing import final, overload
 
 from .consumers import (
     PullConsumer,
@@ -11,6 +11,14 @@ from .kv import KeyValue, KVConfig
 from .object_store import ObjectStore, ObjectStoreConfig
 from .stream import Stream, StreamConfig
 
+__all__ = [
+    "ConsumersManager",
+    "KVManager",
+    "ObjectStoreManager",
+    "StreamsManager",
+]
+
+@final
 class StreamsManager:
     async def create(self, config: StreamConfig) -> Stream: ...
     async def create_or_update(self, config: StreamConfig) -> Stream: ...
@@ -18,6 +26,7 @@ class StreamsManager:
     async def delete(self, name: str) -> bool: ...
     async def update(self, config: StreamConfig) -> Stream: ...
 
+@final
 class KVManager:
     async def create(self, config: KVConfig) -> KeyValue: ...
     async def create_or_update(self, config: KVConfig) -> KeyValue: ...
@@ -25,6 +34,7 @@ class KVManager:
     async def delete(self, bucket: str) -> bool: ...
     async def update(self, config: KVConfig) -> KeyValue: ...
 
+@final
 class ConsumersManager:
     @overload
     async def create(self, config: PullConsumerConfig) -> PullConsumer: ...
@@ -40,6 +50,7 @@ class ConsumersManager:
     async def pause(self, name: str, delay: float | timedelta) -> bool: ...
     async def resume(self, name: str) -> bool: ...
 
+@final
 class ObjectStoreManager:
     async def create(self, config: ObjectStoreConfig) -> ObjectStore: ...
     async def get(self, bucket: str) -> ObjectStore: ...

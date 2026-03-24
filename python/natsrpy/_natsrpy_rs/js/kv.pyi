@@ -1,6 +1,14 @@
+from typing import final
+
 from natsrpy._natsrpy_rs.js.stream import Placement, Republish, Source, StorageType
 from typing_extensions import Self
 
+__all__ = [
+    "KVConfig",
+    "KeyValue",
+]
+
+@final
 class KVConfig:
     """
     KV bucket config.
@@ -43,6 +51,7 @@ class KVConfig:
         limit_markers: float | None = None,
     ) -> Self: ...
 
+@final
 class KeyValue:
     @property
     def stream_name(self) -> str: ...

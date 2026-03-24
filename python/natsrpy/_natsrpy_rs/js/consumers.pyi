@@ -1,8 +1,22 @@
 from datetime import timedelta
+from typing import final
 
 from natsrpy._natsrpy_rs.js import JetStreamMessage
 from typing_extensions import Self
 
+__all__ = [
+    "AckPolicy",
+    "DeliverPolicy",
+    "MessagesIterator",
+    "PriorityPolicy",
+    "PullConsumer",
+    "PullConsumerConfig",
+    "PushConsumer",
+    "PushConsumerConfig",
+    "ReplayPolicy",
+]
+
+@final
 class DeliverPolicy:
     ALL: DeliverPolicy
     LAST: DeliverPolicy
@@ -11,21 +25,25 @@ class DeliverPolicy:
     BY_START_TIME: DeliverPolicy
     LAST_PER_SUBJECT: DeliverPolicy
 
+@final
 class AckPolicy:
     EXPLICIT: AckPolicy
     NONE: AckPolicy
     ALL: AckPolicy
 
+@final
 class ReplayPolicy:
     INSTANT: ReplayPolicy
     ORIGINAL: ReplayPolicy
 
+@final
 class PriorityPolicy:
     NONE: PriorityPolicy
     OVERFLOW: PriorityPolicy
     PINNED_CLIENT: PriorityPolicy
     PRIORITIZED: PriorityPolicy
 
+@final
 class PullConsumerConfig:
     name: str | None
     durable_name: str | None
@@ -88,6 +106,7 @@ class PullConsumerConfig:
         pause_until: int | None = None,
     ) -> Self: ...
 
+@final
 class PushConsumerConfig:
     deliver_subject: str
     name: str | None
@@ -148,6 +167,7 @@ class PushConsumerConfig:
         pause_until: int | None = None,
     ) -> Self: ...
 
+@final
 class MessagesIterator:
     def __aiter__(self) -> MessagesIterator: ...
     async def __anext__(self) -> JetStreamMessage: ...
@@ -156,9 +176,11 @@ class MessagesIterator:
         timeout: float | timedelta | None = None,
     ) -> JetStreamMessage: ...
 
+@final
 class PushConsumer:
     async def messages(self) -> MessagesIterator: ...
 
+@final
 class PullConsumer:
     async def fetch(
         self,
