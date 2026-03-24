@@ -77,7 +77,7 @@ async def test_iterator_drain(nats_url: str) -> None:
     await client.shutdown()
 
 
-async def test_callback_unsubscribe_after_message(nats: Nats) -> None:
+async def test_callback_receives_message(nats: Nats) -> None:
     subj = uuid.uuid4().hex
     event = asyncio.Event()
 
