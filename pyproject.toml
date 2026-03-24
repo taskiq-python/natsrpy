@@ -110,6 +110,8 @@ ignore = [
   "SLF001",  # Private member accessed
   "S311",  # Standard pseudo-random generators are not suitable for security/cryptographic purposes
   "D101",  # Missing docstring in public class
+  "PLR2004",  # Magic value used in comparison
+  "B017",  # Do not assert blind exception
 ]
 
 [tool.ruff.lint.pydocstyle]
