@@ -139,4 +139,11 @@ impl ConsumersManager {
             Ok(ctx.read().await.resume_consumer(&name).await?.paused)
         })
     }
+
+    pub fn delete<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future(py, async move {
+            Ok(ctx.read().await.delete_consumer(&name).await?.success)
+        })
+    }
 }

@@ -21,12 +21,12 @@ async def js(nats: Nats) -> JetStream:
 
 
 async def test_pull_consumer_create(js: JetStream) -> None:
-    stream_name = f"test-pcreate-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pcreate-{uuid.uuid4()}"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
         )
         consumer = await stream.consumers.create(consumer_config)
         assert isinstance(consumer, PullConsumer)
@@ -34,29 +34,8 @@ async def test_pull_consumer_create(js: JetStream) -> None:
         await js.streams.delete(stream_name)
 
 
-async def test_pull_consumer_fetch(js: JetStream) -> None:
-    stream_name = f"test-pfetch-{uuid.uuid4().hex[:8]}"
-    subj = f"{stream_name}.data"
-    config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
-    stream = await js.streams.create(config)
-    try:
-        await js.publish(subj, b"fetch-msg-1")
-        await js.publish(subj, b"fetch-msg-2")
-
-        consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
-        )
-        consumer = await stream.consumers.create(consumer_config)
-        messages = await consumer.fetch(max_messages=2, timeout=5.0)
-        assert len(messages) == 2
-        assert messages[0].payload == b"fetch-msg-1"
-        assert messages[1].payload == b"fetch-msg-2"
-    finally:
-        await js.streams.delete(stream_name)
-
-
 async def test_pull_consumer_fetch_with_ack(js: JetStream) -> None:
-    stream_name = f"test-pack-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pack-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
@@ -64,7 +43,7 @@ async def test_pull_consumer_fetch_with_ack(js: JetStream) -> None:
         await js.publish(subj, b"ack-msg")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             ack_policy=AckPolicy.EXPLICIT,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -76,7 +55,7 @@ async def test_pull_consumer_fetch_with_ack(js: JetStream) -> None:
 
 
 async def test_pull_consumer_nack(js: JetStream) -> None:
-    stream_name = f"test-pnack-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pnack-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
@@ -84,7 +63,7 @@ async def test_pull_consumer_nack(js: JetStream) -> None:
         await js.publish(subj, b"nack-msg")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             ack_policy=AckPolicy.EXPLICIT,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -96,7 +75,7 @@ async def test_pull_consumer_nack(js: JetStream) -> None:
 
 
 async def test_pull_consumer_term(js: JetStream) -> None:
-    stream_name = f"test-pterm-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pterm-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
@@ -104,7 +83,7 @@ async def test_pull_consumer_term(js: JetStream) -> None:
         await js.publish(subj, b"term-msg")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             ack_policy=AckPolicy.EXPLICIT,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -116,7 +95,7 @@ async def test_pull_consumer_term(js: JetStream) -> None:
 
 
 async def test_pull_consumer_progress(js: JetStream) -> None:
-    stream_name = f"test-pprog-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pprog-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
@@ -124,7 +103,7 @@ async def test_pull_consumer_progress(js: JetStream) -> None:
         await js.publish(subj, b"progress-msg")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             ack_policy=AckPolicy.EXPLICIT,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -137,14 +116,14 @@ async def test_pull_consumer_progress(js: JetStream) -> None:
 
 
 async def test_pull_consumer_message_properties(js: JetStream) -> None:
-    stream_name = f"test-pmsgprop-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pmsgprop-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
         await js.publish(subj, b"prop-msg")
 
-        consumer_name = f"consumer-{uuid.uuid4().hex[:8]}"
+        consumer_name = f"consumer-{uuid.uuid4()}"
         consumer_config = PullConsumerConfig(name=consumer_name)
         consumer = await stream.consumers.create(consumer_config)
         messages = await consumer.fetch(max_messages=1, timeout=5.0)
@@ -166,7 +145,7 @@ async def test_pull_consumer_message_properties(js: JetStream) -> None:
 
 
 async def test_pull_consumer_with_filter_subject(js: JetStream) -> None:
-    stream_name = f"test-pfilter-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pfilter-{uuid.uuid4()}"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
@@ -174,7 +153,7 @@ async def test_pull_consumer_with_filter_subject(js: JetStream) -> None:
         await js.publish(f"{stream_name}.b", b"msg-b")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             filter_subject=f"{stream_name}.a",
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -187,7 +166,7 @@ async def test_pull_consumer_with_filter_subject(js: JetStream) -> None:
 
 
 async def test_pull_consumer_deliver_policy(js: JetStream) -> None:
-    stream_name = f"test-pdeliver-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pdeliver-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
@@ -196,7 +175,7 @@ async def test_pull_consumer_deliver_policy(js: JetStream) -> None:
         await js.publish(subj, b"new-msg")
 
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             deliver_policy=DeliverPolicy.LAST,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -208,12 +187,12 @@ async def test_pull_consumer_deliver_policy(js: JetStream) -> None:
 
 
 async def test_pull_consumer_replay_policy(js: JetStream) -> None:
-    stream_name = f"test-preplay-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-preplay-{uuid.uuid4()}"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
         consumer_config = PullConsumerConfig(
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
             replay_policy=ReplayPolicy.INSTANT,
         )
         consumer = await stream.consumers.create(consumer_config)
@@ -223,12 +202,11 @@ async def test_pull_consumer_replay_policy(js: JetStream) -> None:
 
 
 async def test_pull_consumer_durable(js: JetStream) -> None:
-    stream_name = f"test-pdurable-{uuid.uuid4().hex[:8]}"
-    subj = f"{stream_name}.data"
+    stream_name = f"test-pdurable-{uuid.uuid4()}"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        durable_name = f"durable-{uuid.uuid4().hex[:8]}"
+        durable_name = f"durable-{uuid.uuid4()}"
         consumer_config = PullConsumerConfig(
             durable_name=durable_name,
         )
@@ -242,14 +220,14 @@ async def test_pull_consumer_durable(js: JetStream) -> None:
 
 
 async def test_push_consumer_create(js: JetStream) -> None:
-    stream_name = f"test-pushcreate-{uuid.uuid4().hex[:8]}"
+    stream_name = f"test-pushcreate-{uuid.uuid4()}"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
         deliver_subj = uuid.uuid4().hex
         consumer_config = PushConsumerConfig(
             deliver_subject=deliver_subj,
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
         )
         consumer = await stream.consumers.create(consumer_config)
         assert isinstance(consumer, PushConsumer)
@@ -257,26 +235,44 @@ async def test_push_consumer_create(js: JetStream) -> None:
         await js.streams.delete(stream_name)
 
 
-async def test_push_consumer_messages(js: JetStream) -> None:
-    stream_name = f"test-pushmsg-{uuid.uuid4().hex[:8]}"
+async def test_pull_consumer_messages(js: JetStream) -> None:
+    stream_name = f"test-pushmsg-{uuid.uuid4()}"
     subj = f"{stream_name}.data"
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
+    messages = [uuid.uuid4().hex.encode(), uuid.uuid4().hex.encode()]
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"push-msg-1")
-        await js.publish(subj, b"push-msg-2")
+        for message in messages:
+            await js.publish(subj, message)
+        consumer_config = PullConsumerConfig(name=f"consumer-{uuid.uuid4()}")
+        consumer = await stream.consumers.create(consumer_config)
+        msgs_iter = await consumer.fetch(timeout=0.5)
+        for nats_msg, payload in zip(msgs_iter, messages, strict=True):
+            assert nats_msg.payload == payload
+    finally:
+        await js.streams.delete(stream_name)
+
+
+async def test_push_consumer_messages(js: JetStream) -> None:
+    stream_name = f"test-pushmsg-{uuid.uuid4()}"
+    subj = f"{stream_name}.data"
+    config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
+    messages = [uuid.uuid4().hex.encode(), uuid.uuid4().hex.encode()]
+    stream = await js.streams.create(config)
+    try:
+        for message in messages:
+            await js.publish(subj, message)
 
         deliver_subj = uuid.uuid4().hex
         consumer_config = PushConsumerConfig(
             deliver_subject=deliver_subj,
-            name=f"consumer-{uuid.uuid4().hex[:8]}",
+            name=f"consumer-{uuid.uuid4()}",
         )
         consumer = await stream.consumers.create(consumer_config)
         msgs_iter = await consumer.messages()
-        msg1 = await msgs_iter.next(timeout=5.0)
-        msg2 = await msgs_iter.next(timeout=5.0)
-        assert msg1.payload == b"push-msg-1"
-        assert msg2.payload == b"push-msg-2"
+        for message in messages:
+            nats_msg = await msgs_iter.next(timeout=0.5)
+            assert message == nats_msg.payload
     finally:
         await js.streams.delete(stream_name)
 

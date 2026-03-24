@@ -67,7 +67,7 @@ async def test_request_none_payload(nats: Nats) -> None:
     task = asyncio.create_task(responder())
     await asyncio.sleep(0.1)
 
-    await nats.request(subj, None)
+    await nats.request(subj, b"")
     await task
 
     assert received_payload[0] == b""

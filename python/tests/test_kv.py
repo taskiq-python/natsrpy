@@ -4,8 +4,8 @@ import pytest
 from natsrpy import Nats
 from natsrpy.js import (
     JetStream,
-    KVConfig,
     KeyValue,
+    KVConfig,
     StorageType,
 )
 

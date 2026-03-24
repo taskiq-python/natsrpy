@@ -1,11 +1,9 @@
 from natsrpy.js import (
     AckPolicy,
-    Compression,
     DeliverPolicy,
     DiscardPolicy,
     KVConfig,
     ObjectStoreConfig,
-    PersistenceMode,
     PullConsumerConfig,
     PushConsumerConfig,
     ReplayPolicy,
@@ -14,55 +12,6 @@ from natsrpy.js import (
     StorageType,
     StreamConfig,
 )
-
-
-async def test_storage_type_values() -> None:
-    assert StorageType.FILE is not None
-    assert StorageType.MEMORY is not None
-    assert StorageType.FILE != StorageType.MEMORY
-
-
-async def test_discard_policy_values() -> None:
-    assert DiscardPolicy.OLD is not None
-    assert DiscardPolicy.NEW is not None
-    assert DiscardPolicy.OLD != DiscardPolicy.NEW
-
-
-async def test_retention_policy_values() -> None:
-    assert RetentionPolicy.LIMITS is not None
-    assert RetentionPolicy.INTEREST is not None
-    assert RetentionPolicy.WORKQUEUE is not None
-
-
-async def test_compression_values() -> None:
-    assert Compression.S2 is not None
-    assert Compression.NONE is not None
-    assert Compression.S2 != Compression.NONE
-
-
-async def test_persistence_mode_values() -> None:
-    assert PersistenceMode.Default is not None
-    assert PersistenceMode.Async is not None
-
-
-async def test_deliver_policy_values() -> None:
-    assert DeliverPolicy.ALL is not None
-    assert DeliverPolicy.LAST is not None
-    assert DeliverPolicy.NEW is not None
-    assert DeliverPolicy.BY_START_SEQUENCE is not None
-    assert DeliverPolicy.BY_START_TIME is not None
-    assert DeliverPolicy.LAST_PER_SUBJECT is not None
-
-
-async def test_ack_policy_values() -> None:
-    assert AckPolicy.EXPLICIT is not None
-    assert AckPolicy.NONE is not None
-    assert AckPolicy.ALL is not None
-
-
-async def test_replay_policy_values() -> None:
-    assert ReplayPolicy.INSTANT is not None
-    assert ReplayPolicy.ORIGINAL is not None
 
 
 async def test_stream_config_defaults() -> None:

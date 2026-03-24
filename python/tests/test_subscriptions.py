@@ -1,7 +1,6 @@
 import asyncio
 import uuid
 
-import pytest
 from natsrpy import CallbackSubscription, IteratorSubscription, Nats
 
 

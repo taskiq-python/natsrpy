@@ -3,7 +3,6 @@ import uuid
 import pytest
 from natsrpy import Nats
 from natsrpy.js import (
-    Compression,
     DiscardPolicy,
     JetStream,
     RetentionPolicy,
