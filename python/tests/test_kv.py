@@ -1,18 +1,11 @@
 import uuid
 
-import pytest
-from natsrpy import Nats
 from natsrpy.js import (
     JetStream,
     KeyValue,
     KVConfig,
     StorageType,
 )
-
-
-@pytest.fixture()
-async def js(nats: Nats) -> JetStream:
-    return await nats.jetstream()
 
 
 async def test_kv_create(js: JetStream) -> None:

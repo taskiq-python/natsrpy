@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-from natsrpy import Nats
 from natsrpy.js import (
     AckPolicy,
     DeliverPolicy,
@@ -13,11 +11,6 @@ from natsrpy.js import (
     ReplayPolicy,
     StreamConfig,
 )
-
-
-@pytest.fixture()
-async def js(nats: Nats) -> JetStream:
-    return await nats.jetstream()
 
 
 async def test_pull_consumer_create(js: JetStream) -> None:
@@ -40,7 +33,7 @@ async def test_pull_consumer_fetch_with_ack(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"ack-msg")
+        await js.publish(subj, b"ack-msg", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -60,7 +53,7 @@ async def test_pull_consumer_nack(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"nack-msg")
+        await js.publish(subj, b"nack-msg", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -80,7 +73,7 @@ async def test_pull_consumer_term(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"term-msg")
+        await js.publish(subj, b"term-msg", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -100,7 +93,7 @@ async def test_pull_consumer_progress(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"progress-msg")
+        await js.publish(subj, b"progress-msg", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -121,7 +114,7 @@ async def test_pull_consumer_message_properties(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"prop-msg")
+        await js.publish(subj, b"prop-msg", wait=True)
 
         consumer_name = f"consumer-{uuid.uuid4()}"
         consumer_config = PullConsumerConfig(name=consumer_name)
@@ -149,8 +142,8 @@ async def test_pull_consumer_with_filter_subject(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(f"{stream_name}.a", b"msg-a")
-        await js.publish(f"{stream_name}.b", b"msg-b")
+        await js.publish(f"{stream_name}.a", b"msg-a", wait=True)
+        await js.publish(f"{stream_name}.b", b"msg-b", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -171,8 +164,8 @@ async def test_pull_consumer_deliver_policy(js: JetStream) -> None:
     config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"old-msg")
-        await js.publish(subj, b"new-msg")
+        await js.publish(subj, b"old-msg", wait=True)
+        await js.publish(subj, b"new-msg", wait=True)
 
         consumer_config = PullConsumerConfig(
             name=f"consumer-{uuid.uuid4()}",
@@ -243,7 +236,7 @@ async def test_pull_consumer_messages(js: JetStream) -> None:
     stream = await js.streams.create(config)
     try:
         for message in messages:
-            await js.publish(subj, message)
+            await js.publish(subj, message, wait=True)
         consumer_config = PullConsumerConfig(name=f"consumer-{uuid.uuid4()}")
         consumer = await stream.consumers.create(consumer_config)
         msgs_iter = await consumer.fetch(timeout=0.5)
@@ -261,7 +254,7 @@ async def test_push_consumer_messages(js: JetStream) -> None:
     stream = await js.streams.create(config)
     try:
         for message in messages:
-            await js.publish(subj, message)
+            await js.publish(subj, message, wait=True)
 
         deliver_subj = uuid.uuid4().hex
         consumer_config = PushConsumerConfig(

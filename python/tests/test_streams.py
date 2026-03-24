@@ -1,7 +1,5 @@
 import uuid
 
-import pytest
-from natsrpy import Nats
 from natsrpy.js import (
     DiscardPolicy,
     JetStream,
@@ -10,11 +8,6 @@ from natsrpy.js import (
     Stream,
     StreamConfig,
 )
-
-
-@pytest.fixture()
-async def js(nats: Nats) -> JetStream:
-    return await nats.jetstream()
 
 
 async def test_stream_create(js: JetStream) -> None:
@@ -94,9 +87,9 @@ async def test_stream_purge(js: JetStream) -> None:
     config = StreamConfig(name=name, subjects=[f"{name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"msg-1")
-        await js.publish(subj, b"msg-2")
-        await js.publish(subj, b"msg-3")
+        await js.publish(subj, b"msg-1", wait=True)
+        await js.publish(subj, b"msg-2", wait=True)
+        await js.publish(subj, b"msg-3", wait=True)
         info = await stream.get_info()
         assert info.state.messages == 3
         purged = await stream.purge()
@@ -112,8 +105,8 @@ async def test_stream_purge_with_filter(js: JetStream) -> None:
     config = StreamConfig(name=name, subjects=[f"{name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(f"{name}.a", b"a-msg")
-        await js.publish(f"{name}.b", b"b-msg")
+        await js.publish(f"{name}.a", b"a-msg", wait=True)
+        await js.publish(f"{name}.b", b"b-msg", wait=True)
         purged = await stream.purge(filter=f"{name}.a")
         assert purged == 1
         info = await stream.get_info()
@@ -128,7 +121,7 @@ async def test_stream_direct_get(js: JetStream) -> None:
     config = StreamConfig(name=name, subjects=[f"{name}.>"], allow_direct=True)
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"direct-get-msg")
+        await js.publish(subj, b"direct-get-msg", wait=True)
         msg = await stream.direct_get(sequence=1)
         assert msg.payload == b"direct-get-msg"
         assert msg.subject == subj
@@ -143,7 +136,7 @@ async def test_stream_message_repr(js: JetStream) -> None:
     config = StreamConfig(name=name, subjects=[f"{name}.>"], allow_direct=True)
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"repr-test")
+        await js.publish(subj, b"repr-test", wait=True)
         msg = await stream.direct_get(sequence=1)
         r = repr(msg)
         assert isinstance(r, str)
@@ -250,8 +243,8 @@ async def test_stream_state_after_publish(js: JetStream) -> None:
     config = StreamConfig(name=name, subjects=[f"{name}.>"])
     stream = await js.streams.create(config)
     try:
-        await js.publish(subj, b"msg-1")
-        await js.publish(subj, b"msg-2")
+        await js.publish(subj, b"msg-1", wait=True)
+        await js.publish(subj, b"msg-2", wait=True)
         info = await stream.get_info()
         assert info.state.messages == 2
         assert info.state.first_sequence == 1

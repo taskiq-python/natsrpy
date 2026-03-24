@@ -47,17 +47,19 @@ pub enum NatsrpyError {
     #[error(transparent)]
     CreateKeyValueError(#[from] async_nats::jetstream::context::CreateKeyValueError),
     #[error(transparent)]
+    CreateStreamError(#[from] async_nats::jetstream::context::CreateStreamError),
+    #[error(transparent)]
+    GetStreamError(#[from] async_nats::jetstream::context::GetStreamError),
+    #[error(transparent)]
+    KVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
+    #[error(transparent)]
+    JSPublishError(#[from] async_nats::jetstream::context::PublishError),
+    #[error(transparent)]
     KVEntryError(#[from] async_nats::jetstream::kv::EntryError),
     #[error(transparent)]
     KVPutError(#[from] async_nats::jetstream::kv::PutError),
     #[error(transparent)]
-    KVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
-    #[error(transparent)]
     DeleteError(#[from] async_nats::jetstream::kv::DeleteError),
-    #[error(transparent)]
-    CreateStreamError(#[from] async_nats::jetstream::context::CreateStreamError),
-    #[error(transparent)]
-    GetStreamError(#[from] async_nats::jetstream::context::GetStreamError),
     #[error(transparent)]
     StreamDirectGetError(#[from] async_nats::jetstream::stream::DirectGetError),
     #[error(transparent)]

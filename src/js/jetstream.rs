@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_nats::{Subject, client::traits::Publisher, connection::State};
+use async_nats::{Subject, connection::State, jetstream::context::traits::Publisher};
 use pyo3::{Bound, PyAny, Python, types::PyDict};
 use tokio::sync::RwLock;
 
@@ -20,6 +20,28 @@ impl JetStream {
     pub fn new(ctx: async_nats::jetstream::Context) -> Self {
         Self {
             ctx: Arc::new(RwLock::new(ctx)),
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Clone, Debug)]
+pub struct Publication {
+    pub stream: String,
+    pub sequence: u64,
+    pub domain: String,
+    pub duplicate: bool,
+    pub value: Option<String>,
+}
+
+impl From<async_nats::jetstream::publish::PublishAck> for Publication {
+    fn from(value: async_nats::jetstream::publish::PublishAck) -> Self {
+        Self {
+            stream: value.stream,
+            sequence: value.sequence,
+            domain: value.domain,
+            duplicate: value.duplicate,
+            value: value.value,
         }
     }
 }
@@ -49,8 +71,8 @@ impl JetStream {
         payload,
         *,
         headers=None,
-        reply=None,
-        err_on_disconnect = false
+        err_on_disconnect = false,
+        wait = false,
     ))]
     pub fn publish<'py>(
         &self,
@@ -58,8 +80,8 @@ impl JetStream {
         subject: String,
         payload: SendableValue,
         headers: Option<Bound<PyDict>>,
-        reply: Option<String>,
         err_on_disconnect: bool,
+        wait: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         let data = payload.into();
@@ -72,16 +94,21 @@ impl JetStream {
             {
                 return Err(NatsrpyError::Disconnected);
             }
-            ctx.read()
+            let publication = ctx
+                .read()
                 .await
-                .publish_message(async_nats::message::OutboundMessage {
+                .publish_message(async_nats::jetstream::message::OutboundMessage {
                     subject: Subject::from(subject),
                     payload: data,
                     headers: headermap,
-                    reply: reply.map(Subject::from),
                 })
                 .await?;
-            Ok(())
+
+            if wait {
+                Ok(Some(Publication::from(publication.await?)))
+            } else {
+                Ok(None)
+            }
         })
     }
 }

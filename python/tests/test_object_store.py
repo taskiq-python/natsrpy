@@ -1,19 +1,12 @@
 import io
 import uuid
 
-import pytest
-from natsrpy import Nats
 from natsrpy.js import (
     JetStream,
     ObjectStore,
     ObjectStoreConfig,
     StorageType,
 )
-
-
-@pytest.fixture()
-async def js(nats: Nats) -> JetStream:
-    return await nats.jetstream()
 
 
 async def test_object_store_create(js: JetStream) -> None:

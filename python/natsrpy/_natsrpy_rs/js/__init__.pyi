@@ -1,18 +1,46 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Literal, overload
 
 from .managers import KVManager, ObjectStoreManager, StreamsManager
 
+class Publication:
+    stream: str
+    sequence: int
+    domain: str
+    duplicate: bool
+    value: str | None
+
 class JetStream:
+    @overload
     async def publish(
         self,
         subject: str,
         payload: str | bytes | bytearray | memoryview,
         *,
         headers: dict[str, str] | None = None,
-        reply: str | None = None,
         err_on_disconnect: bool = False,
+        wait: Literal[True],
+    ) -> Publication: ...
+    @overload
+    async def publish(
+        self,
+        subject: str,
+        payload: str | bytes | bytearray | memoryview,
+        *,
+        headers: dict[str, str] | None = None,
+        err_on_disconnect: bool = False,
+        wait: Literal[False] = False,
     ) -> None: ...
+    @overload
+    async def publish(
+        self,
+        subject: str,
+        payload: str | bytes | bytearray | memoryview,
+        *,
+        headers: dict[str, str] | None = None,
+        err_on_disconnect: bool = False,
+        wait: bool = False,
+    ) -> Publication | None: ...
     @property
     def kv(self) -> KVManager: ...
     @property

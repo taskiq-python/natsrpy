@@ -228,7 +228,11 @@ class StreamInfo:
     sources: list[SourceInfo]
 
 class Stream:
-    async def direct_get(self, sequence: int) -> StreamMessage:
+    async def direct_get(
+        self,
+        sequence: int,
+        timeout: float | datetime | None = None,
+    ) -> StreamMessage:
         """
         Get direct message from the stream.
 
@@ -236,7 +240,10 @@ class Stream:
         :return: Message.
         """
 
-    async def get_info(self) -> StreamInfo:
+    async def get_info(
+        self,
+        timeout: float | datetime | None = None,
+    ) -> StreamInfo:
         """
         Get information about the stream.
 
@@ -248,6 +255,7 @@ class Stream:
         filter: str | None = None,
         sequence: int | None = None,
         keep: int | None = None,
+        timeout: float | datetime | None = None,
     ) -> int:
         """
         Purge current stream.

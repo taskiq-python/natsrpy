@@ -7,7 +7,11 @@ use std::{collections::HashMap, ops::Deref, sync::Arc, time::Duration};
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::managers::consumers::ConsumersManager,
-    utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::ToPyDate},
+    utils::{
+        futures::natsrpy_future_with_timeout,
+        headers::NatsrpyHeadermapExt,
+        py_types::{TimeValue, ToPyDate},
+    },
 };
 use pyo3::{Bound, PyAny, Python};
 use tokio::sync::RwLock;
@@ -958,13 +962,15 @@ impl Stream {
         ConsumersManager::new(self.stream.clone())
     }
 
+    #[pyo3(signature=(sequence, timeout=None))]
     pub fn direct_get<'py>(
         &self,
         py: Python<'py>,
         sequence: u64,
+        timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
+        natsrpy_future_with_timeout(py, timeout, async move {
             let message = ctx.read().await.direct_get(sequence).await?;
             let result =
                 Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
@@ -972,9 +978,14 @@ impl Stream {
         })
     }
 
-    pub fn get_info<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+    #[pyo3(signature=(timeout=None))]
+    pub fn get_info<'py>(
+        &self,
+        py: Python<'py>,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
+        natsrpy_future_with_timeout(py, timeout, async move {
             StreamInfo::try_from(ctx.read().await.get_info().await?)
         })
     }
@@ -983,6 +994,7 @@ impl Stream {
         filter=None,
         sequence=None,
         keep=None,
+        timeout=None,
     ))]
     pub fn purge<'py>(
         &self,
@@ -990,9 +1002,10 @@ impl Stream {
         filter: Option<String>,
         sequence: Option<u64>,
         keep: Option<u64>,
+        timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
+        natsrpy_future_with_timeout(py, timeout, async move {
             let mut purge_request = ctx.read().await.purge();
             if let Some(filter) = filter {
                 purge_request = purge_request.filter(filter);
