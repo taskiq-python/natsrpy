@@ -7,8 +7,6 @@ ROOT_DIR = Path(__file__).parent.parent
 
 
 def main():
-    print(os.environ["VIRTUAL_ENV"])
-    subprocess.run(["pip", "install", "mypy"], check=True)
     subprocess.run(["maturin", "dev", "--uv"], cwd=ROOT_DIR, check=True)
     os.execvpe("stubtest", ["--ignore-disjoint-bases", "natsrpy"], env=os.environ)
 
