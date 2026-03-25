@@ -3,7 +3,7 @@ use pyo3::{
     Bound, IntoPyObjectExt, Py, PyAny, Python,
     types::{PyBytes, PyBytesMethods, PyDict},
 };
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::{
@@ -161,7 +161,7 @@ impl NatsCls {
         payload: Option<Bound<PyBytes>>,
         headers: Option<Bound<PyDict>>,
         inbox: Option<String>,
-        timeout: Option<Duration>,
+        timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
         let data = payload.map(|inner| bytes::Bytes::from(inner.as_bytes().to_vec()));
@@ -174,7 +174,7 @@ impl NatsCls {
                     payload: data,
                     headers: headermap,
                     inbox,
-                    timeout: timeout.map(Some),
+                    timeout: timeout.map(Into::into).map(Some),
                 };
                 session.send_request(subject, request).await?;
                 Ok(())
@@ -236,8 +236,8 @@ impl NatsCls {
         py: Python<'py>,
         domain: Option<String>,
         api_prefix: Option<String>,
-        timeout: Option<Duration>,
-        ack_timeout: Option<Duration>,
+        timeout: Option<TimeValue>,
+        ack_timeout: Option<TimeValue>,
         concurrency_limit: Option<usize>,
         max_ack_inflight: Option<usize>,
         backpressure_on_inflight: Option<bool>,
@@ -248,10 +248,10 @@ impl NatsCls {
             let mut builder =
                 async_nats::jetstream::ContextBuilder::new().concurrency_limit(concurrency_limit);
             if let Some(timeout) = ack_timeout {
-                builder = builder.ack_timeout(timeout);
+                builder = builder.ack_timeout(timeout.into());
             }
             if let Some(timeout) = timeout {
-                builder = builder.timeout(timeout);
+                builder = builder.timeout(timeout.into());
             }
             if let Some(max_ack_inflight) = max_ack_inflight {
                 builder = builder.max_ack_inflight(max_ack_inflight);

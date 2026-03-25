@@ -64,6 +64,12 @@ impl From<TimeValue> for Duration {
     }
 }
 
+impl Default for TimeValue {
+    fn default() -> Self {
+        Self::Duration(Duration::default())
+    }
+}
+
 impl<'py> FromPyObject<'_, 'py> for TimeValue {
     type Error = NatsrpyError;
 

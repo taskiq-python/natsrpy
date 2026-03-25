@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, Python};
@@ -47,8 +47,8 @@ impl PullConsumer {
         group: Option<String>,
         priority: Option<usize>,
         max_bytes: Option<usize>,
-        heartbeat: Option<Duration>,
-        expires: Option<Duration>,
+        heartbeat: Option<TimeValue>,
+        expires: Option<TimeValue>,
         min_pending: Option<usize>,
         min_ack_pending: Option<usize>,
         timeout: Option<TimeValue>,
@@ -74,10 +74,10 @@ impl PullConsumer {
                 fetch_builder = fetch_builder.max_bytes(max_bytes);
             }
             if let Some(heartbeat) = heartbeat {
-                fetch_builder = fetch_builder.heartbeat(heartbeat);
+                fetch_builder = fetch_builder.heartbeat(heartbeat.into());
             }
             if let Some(expires) = expires {
-                fetch_builder = fetch_builder.expires(expires);
+                fetch_builder = fetch_builder.expires(expires.into());
             }
             if let Some(min_pending) = min_pending {
                 fetch_builder = fetch_builder.min_pending(min_pending);

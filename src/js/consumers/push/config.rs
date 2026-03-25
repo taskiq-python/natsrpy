@@ -3,6 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use crate::{
     exceptions::rust_err::NatsrpyError,
     js::consumers::common::{AckPolicy, DeliverPolicy, ReplayPolicy},
+    utils::py_types::TimeValue,
 };
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
@@ -81,7 +82,7 @@ impl PushConsumerConfig {
         delivery_start_sequence: Option<u64>,
         delivery_start_time: Option<i64>,
         ack_policy: Option<AckPolicy>,
-        ack_wait: Option<Duration>,
+        ack_wait: Option<TimeValue>,
         max_deliver: Option<i64>,
         filter_subject: Option<String>,
         filter_subjects: Option<Vec<String>>,
@@ -92,12 +93,12 @@ impl PushConsumerConfig {
         max_ack_pending: Option<i64>,
         headers_only: Option<bool>,
         flow_control: Option<bool>,
-        idle_heartbeat: Option<Duration>,
+        idle_heartbeat: Option<TimeValue>,
         num_replicas: Option<usize>,
         memory_storage: Option<bool>,
         metadata: Option<HashMap<String, String>>,
-        backoff: Option<Vec<Duration>>,
-        inactive_threshold: Option<Duration>,
+        backoff: Option<Vec<TimeValue>>,
+        inactive_threshold: Option<TimeValue>,
         pause_until: Option<i64>,
     ) -> Self {
         Self {
@@ -112,7 +113,7 @@ impl PushConsumerConfig {
 
             deliver_policy: deliver_policy.unwrap_or_default(),
             ack_policy: ack_policy.unwrap_or_default(),
-            ack_wait: ack_wait.unwrap_or_default(),
+            ack_wait: ack_wait.unwrap_or_default().into(),
             max_deliver: max_deliver.unwrap_or_default(),
             filter_subject: filter_subject.unwrap_or_default(),
             filter_subjects: filter_subjects.unwrap_or_default(),
@@ -123,12 +124,16 @@ impl PushConsumerConfig {
             max_ack_pending: max_ack_pending.unwrap_or_default(),
             headers_only: headers_only.unwrap_or_default(),
             flow_control: flow_control.unwrap_or_default(),
-            idle_heartbeat: idle_heartbeat.unwrap_or_default(),
+            idle_heartbeat: idle_heartbeat.unwrap_or_default().into(),
             num_replicas: num_replicas.unwrap_or_default(),
             memory_storage: memory_storage.unwrap_or_default(),
             metadata: metadata.unwrap_or_default(),
-            backoff: backoff.unwrap_or_default(),
-            inactive_threshold: inactive_threshold.unwrap_or_default(),
+            backoff: backoff
+                .unwrap_or_default()
+                .into_iter()
+                .map(Into::into)
+                .collect(),
+            inactive_threshold: inactive_threshold.unwrap_or_default().into(),
         }
     }
 }
