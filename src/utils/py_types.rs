@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use pyo3::{
-    Bound, FromPyObject, PyResult, Python,
+    Bound, FromPyObject, PyResult, Python, type_hint_identifier, type_hint_union,
     types::{PyBytes, PyBytesMethods, PyDateTime, PyTzInfo},
 };
 
@@ -15,6 +15,12 @@ pub enum SendableValue {
 
 impl<'py> FromPyObject<'_, 'py> for SendableValue {
     type Error = NatsrpyError;
+    const INPUT_TYPE: pyo3::inspect::PyStaticExpr = type_hint_union!(
+        type_hint_identifier!("builtins", "str"),
+        type_hint_identifier!("builtins", "bytes"),
+        type_hint_identifier!("builtins", "bytearray"),
+        type_hint_identifier!("builtins", "memoryview")
+    );
 
     fn extract(obj: pyo3::Borrowed<'_, 'py, pyo3::PyAny>) -> Result<Self, Self::Error> {
         #[allow(clippy::option_if_let_else)]
@@ -60,6 +66,11 @@ impl From<TimeValue> for Duration {
 
 impl<'py> FromPyObject<'_, 'py> for TimeValue {
     type Error = NatsrpyError;
+
+    const INPUT_TYPE: pyo3::inspect::PyStaticExpr = type_hint_union!(
+        type_hint_identifier!("builtins", "float"),
+        type_hint_identifier!("datetime", "timedelta")
+    );
 
     fn extract(obj: pyo3::Borrowed<'_, 'py, pyo3::PyAny>) -> Result<Self, Self::Error> {
         #[allow(clippy::option_if_let_else)]

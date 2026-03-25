@@ -1,11 +1,19 @@
 use std::{sync::Arc, time::Duration};
 
-use crate::js;
-use pyo3::{
-    Bound, PyAny, Python,
-    types::{PyBytes, PyBytesMethods},
+use crate::{
+    js::{self, stream::StreamInfo},
+    utils::{
+        futures::natsrpy_future_with_timeout,
+        py_types::{SendableValue, TimeValue, ToPyDate},
+        streamer::Streamer,
+    },
 };
-use tokio::sync::RwLock;
+use futures_util::StreamExt;
+use pyo3::{
+    Bound, Py, PyAny, PyRef, Python,
+    types::{PyBytes, PyDateTime},
+};
+use tokio::sync::{Mutex, RwLock};
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -129,6 +137,71 @@ impl TryFrom<KVConfig> for async_nats::jetstream::kv::Config {
 }
 
 #[pyo3::pyclass(from_py_object)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum KVOperation {
+    Put,
+    Delete,
+    Purge,
+}
+
+impl From<async_nats::jetstream::kv::Operation> for KVOperation {
+    fn from(value: async_nats::jetstream::kv::Operation) -> Self {
+        match value {
+            async_nats::jetstream::kv::Operation::Put => Self::Put,
+            async_nats::jetstream::kv::Operation::Purge => Self::Purge,
+            async_nats::jetstream::kv::Operation::Delete => Self::Delete,
+        }
+    }
+}
+
+#[pyo3::pyclass(get_all)]
+pub struct KVEntry {
+    pub bucket: String,
+    pub key: String,
+    pub value: Py<PyBytes>,
+    pub revision: u64,
+    pub delta: u64,
+    pub created: Py<PyDateTime>,
+    pub operation: KVOperation,
+    pub seen_current: bool,
+}
+
+impl TryFrom<async_nats::jetstream::kv::Entry> for KVEntry {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::jetstream::kv::Entry) -> Result<Self, Self::Error> {
+        Ok(Self {
+            bucket: value.bucket,
+            key: value.key,
+            value: Python::attach(|gil| PyBytes::new(gil, &value.value).unbind()),
+            revision: value.revision,
+            delta: value.delta,
+            created: Python::attach(|gil| value.created.to_py_date(gil).map(pyo3::Bound::unbind))?,
+            operation: value.operation.into(),
+            seen_current: value.seen_current,
+        })
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct KVStatus {
+    info: StreamInfo,
+    bucket: String,
+}
+
+impl TryFrom<async_nats::jetstream::kv::bucket::Status> for KVStatus {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::jetstream::kv::bucket::Status) -> Result<Self, Self::Error> {
+        Ok(Self {
+            info: value.info.try_into()?,
+            bucket: value.bucket,
+        })
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct KeyValue {
     #[pyo3(get)]
@@ -173,28 +246,343 @@ impl KeyValue {
         })
     }
 
+    #[pyo3(signature=(key, value, ttl=None))]
+    pub fn create<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        value: SendableValue,
+        ttl: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        let data = value.into();
+        natsrpy_future(py, async move {
+            if let Some(ttl) = ttl {
+                Ok(store
+                    .read()
+                    .await
+                    .create_with_ttl(key, data, ttl.into())
+                    .await?)
+            } else {
+                Ok(store.read().await.create(key, data).await?)
+            }
+        })
+    }
+
+    #[pyo3(signature=(
+        key,
+        ttl=None,
+        expect_revision=None,
+    ))]
+    pub fn purge<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        ttl: Option<TimeValue>,
+        expect_revision: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            match (ttl, expect_revision) {
+                (None, _) => Ok(store
+                    .read()
+                    .await
+                    .purge_expect_revision(key, expect_revision)
+                    .await?),
+                (Some(ttl), None) => Ok(store.read().await.purge_with_ttl(key, ttl.into()).await?),
+                (Some(ttl), Some(revision)) => Ok(store
+                    .read()
+                    .await
+                    .purge_expect_revision_with_ttl(key, revision, ttl.into())
+                    .await?),
+            }
+        })
+    }
+
     pub fn put<'py>(
         &self,
         py: Python<'py>,
         key: String,
-        value: &Bound<'py, PyBytes>,
+        value: SendableValue,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
-        let data = bytes::Bytes::copy_from_slice(value.as_bytes());
+        let data = value.into();
         natsrpy_future(
             py,
             async move { Ok(store.read().await.put(key, data).await?) },
         )
     }
 
-    pub fn delete<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+    #[pyo3(signature=(
+        key,
+        expect_revision=None,
+    ))]
+    pub fn delete<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        expect_revision: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
-        natsrpy_future(py, async move { Ok(store.read().await.delete(key).await?) })
+        natsrpy_future(py, async move {
+            Ok(store
+                .read()
+                .await
+                .delete_expect_revision(key, expect_revision)
+                .await?)
+        })
+    }
+
+    pub fn update<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        value: SendableValue,
+        revision: u64,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(store
+                .read()
+                .await
+                .update(key, value.into(), revision)
+                .await?)
+        })
+    }
+
+    pub fn history<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(KVEntryIterator::new(Streamer::new(
+                store.read().await.history(key).await?,
+            )))
+        })
+    }
+
+    #[pyo3(signature=(from_revision=None))]
+    pub fn watch_all<'py>(
+        &self,
+        py: Python<'py>,
+        from_revision: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            let watch = if let Some(rev) = from_revision {
+                store.read().await.watch_all_from_revision(rev).await?
+            } else {
+                store.read().await.watch_all().await?
+            };
+            Ok(KVEntryIterator::new(Streamer::new(watch)))
+        })
+    }
+
+    #[pyo3(signature=(key, from_revision=None))]
+    pub fn watch<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        from_revision: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            let watch = if let Some(rev) = from_revision {
+                store.read().await.watch_from_revision(key, rev).await?
+            } else {
+                store.read().await.watch(key).await?
+            };
+            Ok(KVEntryIterator::new(Streamer::new(watch)))
+        })
+    }
+
+    pub fn watch_with_history<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(KVEntryIterator::new(Streamer::new(
+                store.read().await.watch_with_history(key).await?,
+            )))
+        })
+    }
+
+    pub fn watch_many<'py>(
+        &self,
+        py: Python<'py>,
+        keys: Vec<String>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(KVEntryIterator::new(Streamer::new(
+                store.read().await.watch_many(keys).await?,
+            )))
+        })
+    }
+
+    pub fn watch_many_with_history<'py>(
+        &self,
+        py: Python<'py>,
+        keys: Vec<String>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(KVEntryIterator::new(Streamer::new(
+                store.read().await.watch_many_with_history(keys).await?,
+            )))
+        })
+    }
+
+    #[pyo3(signature=(
+        key,
+        revision=None,
+    ))]
+    pub fn entry<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        revision: Option<u64>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            let entry = if let Some(rev) = revision {
+                store
+                    .read()
+                    .await
+                    .entry_for_revision(key, rev)
+                    .await?
+                    .map(KVEntry::try_from)
+                    .transpose()?
+            } else {
+                store
+                    .read()
+                    .await
+                    .entry(key)
+                    .await?
+                    .map(KVEntry::try_from)
+                    .transpose()?
+            };
+            Ok(entry)
+        })
+    }
+
+    pub fn status<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            KVStatus::try_from(store.read().await.status().await?)
+        })
+    }
+
+    pub fn keys<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let store = self.store.clone();
+        natsrpy_future(py, async move {
+            Ok(KeysIterator::new(Streamer::new(
+                store.read().await.keys().await?,
+            )))
+        })
+    }
+}
+
+#[pyo3::pyclass]
+pub struct KeysIterator {
+    streamer: Arc<Mutex<Streamer<Result<String, async_nats::jetstream::kv::WatcherError>>>>,
+}
+
+impl KeysIterator {
+    #[must_use]
+    pub fn new(
+        streamer: Streamer<Result<String, async_nats::jetstream::kv::WatcherError>>,
+    ) -> Self {
+        Self {
+            streamer: Arc::new(Mutex::new(streamer)),
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl KeysIterator {
+    #[must_use]
+    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    #[pyo3(signature=(timeout=None))]
+    pub fn next<'py>(
+        &self,
+        py: Python<'py>,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.streamer.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let value = ctx.lock().await.next().await;
+            match value {
+                Some(entry) => Ok(entry?),
+                None => Err(NatsrpyError::AsyncStopIteration),
+            }
+        })
+    }
+
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        self.next(py, None)
+    }
+}
+
+#[pyo3::pyclass]
+pub struct KVEntryIterator {
+    streamer: Arc<
+        Mutex<
+            Streamer<
+                Result<async_nats::jetstream::kv::Entry, async_nats::jetstream::kv::WatcherError>,
+            >,
+        >,
+    >,
+}
+
+impl KVEntryIterator {
+    #[must_use]
+    pub fn new(
+        streamer: Streamer<
+            Result<async_nats::jetstream::kv::Entry, async_nats::jetstream::kv::WatcherError>,
+        >,
+    ) -> Self {
+        Self {
+            streamer: Arc::new(Mutex::new(streamer)),
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl KVEntryIterator {
+    #[must_use]
+    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    #[pyo3(signature=(timeout=None))]
+    pub fn next<'py>(
+        &self,
+        py: Python<'py>,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.streamer.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let value = ctx.lock().await.next().await;
+            match value {
+                Some(entry) => KVEntry::try_from(entry?),
+                None => Err(NatsrpyError::AsyncStopIteration),
+            }
+        })
+    }
+
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        self.next(py, None)
     }
 }
 
 #[pyo3::pymodule(submodule, name = "kv")]
 pub mod pymod {
     #[pymodule_export]
-    use super::{KVConfig, KeyValue};
+    use super::{
+        KVConfig, KVEntry, KVEntryIterator, KVOperation, KVStatus, KeyValue, KeysIterator,
+    };
 }

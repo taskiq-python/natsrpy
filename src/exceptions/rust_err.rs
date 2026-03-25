@@ -8,6 +8,8 @@ pub type NatsrpyResult<T> = Result<T, NatsrpyError>;
 pub enum NatsrpyError {
     #[error(transparent)]
     StdIOError(#[from] std::io::Error),
+    #[error(transparent)]
+    UnknownError(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
     #[error("NATS session error: {0}")]
     SessionError(String),
     #[error("Invalid arguemnt: {0}")]
@@ -43,31 +45,39 @@ pub enum NatsrpyError {
     #[error(transparent)]
     UnsubscribeError(#[from] async_nats::UnsubscribeError),
     #[error(transparent)]
-    KeyValueError(#[from] async_nats::jetstream::context::KeyValueError),
+    JSKVError(#[from] async_nats::jetstream::context::KeyValueError),
     #[error(transparent)]
-    CreateKeyValueError(#[from] async_nats::jetstream::context::CreateKeyValueError),
+    JSKVCreateError(#[from] async_nats::jetstream::context::CreateKeyValueError),
     #[error(transparent)]
-    CreateStreamError(#[from] async_nats::jetstream::context::CreateStreamError),
+    JSStreamCreateError(#[from] async_nats::jetstream::context::CreateStreamError),
     #[error(transparent)]
-    GetStreamError(#[from] async_nats::jetstream::context::GetStreamError),
+    JSStreamGetError(#[from] async_nats::jetstream::context::GetStreamError),
     #[error(transparent)]
-    KVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
+    JSKVUpdateError(#[from] async_nats::jetstream::context::UpdateKeyValueError),
     #[error(transparent)]
     JSPublishError(#[from] async_nats::jetstream::context::PublishError),
+    #[error(transparent)]
+    JSObjectStoreError(#[from] async_nats::jetstream::context::ObjectStoreError),
     #[error(transparent)]
     KVEntryError(#[from] async_nats::jetstream::kv::EntryError),
     #[error(transparent)]
     KVPutError(#[from] async_nats::jetstream::kv::PutError),
     #[error(transparent)]
-    DeleteError(#[from] async_nats::jetstream::kv::DeleteError),
+    KVUpdateError(#[from] async_nats::jetstream::kv::UpdateError),
+    #[error(transparent)]
+    KVCreateError(#[from] async_nats::jetstream::kv::CreateError),
+    #[error(transparent)]
+    KVWatcherError(#[from] async_nats::jetstream::kv::WatcherError),
+    #[error(transparent)]
+    KVHistoryError(#[from] async_nats::jetstream::kv::HistoryError),
+    #[error(transparent)]
+    KVStatusError(#[from] async_nats::jetstream::kv::StatusError),
     #[error(transparent)]
     StreamDirectGetError(#[from] async_nats::jetstream::stream::DirectGetError),
     #[error(transparent)]
     StreamInfoError(#[from] async_nats::jetstream::stream::InfoError),
     #[error(transparent)]
     StreamPurgeError(#[from] async_nats::jetstream::stream::PurgeError),
-    #[error(transparent)]
-    UnknownError(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
     #[error(transparent)]
     PullMessageError(#[from] async_nats::jetstream::consumer::pull::MessagesError),
     #[error(transparent)]
@@ -80,8 +90,6 @@ pub enum NatsrpyError {
     ConsumerStreamError(#[from] async_nats::jetstream::consumer::StreamError),
     #[error(transparent)]
     ConsumerUpdateError(#[from] async_nats::jetstream::stream::ConsumerUpdateError),
-    #[error(transparent)]
-    ObjectStoreError(#[from] async_nats::jetstream::context::ObjectStoreError),
     #[error(transparent)]
     ObjectStoreGetError(#[from] async_nats::jetstream::object_store::GetError),
     #[error(transparent)]
