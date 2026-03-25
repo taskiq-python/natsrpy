@@ -147,6 +147,7 @@ class JetStreamMessage:
     @property
     def token(self) -> str | None:
         """Authentication token, if applicable."""
+
     async def ack(self, double: bool = False) -> None:
         """Acknowledge that a message was handled.
 
