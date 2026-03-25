@@ -33,7 +33,7 @@ repos:
         types:
           - rust
         name: rust fmt
-        language: system
+        language: unsupported
         entry: cargo
         pass_filenames: false
         args:
@@ -43,7 +43,7 @@ repos:
         types:
           - rust
         name: fixing fixable clippy
-        language: system
+        language: unsupported
         pass_filenames: false
         entry: cargo
         args:
@@ -55,7 +55,7 @@ repos:
         types:
           - rust
         name: rust clippy
-        language: system
+        language: unsupported
         pass_filenames: false
         entry: cargo
         args:
@@ -65,7 +65,7 @@ repos:
         types:
           - rust
         name: rust cargo check
-        language: system
+        language: unsupported
         entry: cargo
         pass_filenames: false
         args:
