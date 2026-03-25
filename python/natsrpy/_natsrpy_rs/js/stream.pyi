@@ -29,32 +29,77 @@ __all__ = [
 
 @final
 class StorageType:
+    """Stream storage backend type.
+
+    Attributes:
+        FILE: persistent file-based storage.
+        MEMORY: in-memory storage.
+    """
+
     FILE: StorageType
     MEMORY: StorageType
 
 @final
 class DiscardPolicy:
+    """Policy for discarding messages when stream limits are reached.
+
+    Attributes:
+        OLD: discard the oldest messages first.
+        NEW: reject new messages when the limit is reached.
+    """
+
     OLD: DiscardPolicy
     NEW: DiscardPolicy
 
 @final
 class RetentionPolicy:
+    """Stream message retention policy.
+
+    Attributes:
+        LIMITS: retain messages until size or age limits are hit.
+        INTEREST: retain messages until all known consumers have acknowledged.
+        WORKQUEUE: retain messages until acknowledged by a single consumer.
+    """
+
     LIMITS: RetentionPolicy
     INTEREST: RetentionPolicy
     WORKQUEUE: RetentionPolicy
 
 @final
 class Compression:
+    """Stream data compression algorithm.
+
+    Attributes:
+        S2: S2 compression.
+        NONE: no compression.
+    """
+
     S2: Compression
     NONE: Compression
 
 @final
 class PersistenceMode:
+    """Write persistence mode for stream messages.
+
+    Attributes:
+        Default: synchronous write to disk.
+        Async: asynchronous write to disk.
+    """
+
     Default: PersistenceMode
     Async: PersistenceMode
 
 @final
 class ConsumerLimits:
+    """Default consumer limits applied to consumers on this stream.
+
+    Attributes:
+        inactive_threshold: duration after which an inactive consumer
+            is removed.
+        max_ack_pending: maximum number of outstanding unacknowledged
+            messages.
+    """
+
     inactive_threshold: timedelta
     max_ack_pending: int
 
@@ -62,6 +107,13 @@ class ConsumerLimits:
 
 @final
 class External:
+    """External stream reference for cross-account or cross-domain access.
+
+    Attributes:
+        api_prefix: API prefix for the external stream.
+        delivery_prefix: optional delivery prefix override.
+    """
+
     api_prefix: str
     delivery_prefix: str | None
 
@@ -69,6 +121,13 @@ class External:
 
 @final
 class SubjectTransform:
+    """Subject mapping transformation rule.
+
+    Attributes:
+        source: source subject pattern.
+        destination: destination subject pattern.
+    """
+
     source: str
     destination: str
 
@@ -76,6 +135,18 @@ class SubjectTransform:
 
 @final
 class Source:
+    """Configuration for a stream source or mirror origin.
+
+    Attributes:
+        name: name of the source stream.
+        filter_subject: optional subject filter applied to the source.
+        external: optional external stream reference.
+        start_sequence: optional starting sequence number.
+        start_time: optional starting timestamp.
+        domain: optional JetStream domain.
+        subject_transforms: optional subject transformation rule.
+    """
+
     name: str
     filter_subject: str | None = None
     external: External | None = None
@@ -97,6 +168,13 @@ class Source:
 
 @final
 class Placement:
+    """Placement hints for stream replicas across clusters and tags.
+
+    Attributes:
+        cluster: preferred cluster name.
+        tags: server tags used for placement.
+    """
+
     cluster: str | None
     tags: list[str] | None
 
@@ -108,6 +186,14 @@ class Placement:
 
 @final
 class Republish:
+    """Republish configuration for echoing stream messages to other subjects.
+
+    Attributes:
+        source: source subject filter.
+        destination: destination subject to republish to.
+        headers_only: when True, only headers are republished.
+    """
+
     source: str
     destination: str
     headers_only: bool
@@ -116,6 +202,54 @@ class Republish:
 
 @final
 class StreamConfig:
+    """Configuration for creating or updating a JetStream stream.
+
+    Attributes:
+        name: stream name.
+        subjects: list of subjects the stream listens on.
+        max_bytes: maximum total size of the stream in bytes.
+        max_messages: maximum number of messages in the stream.
+        max_messages_per_subject: maximum messages per subject.
+        discard: policy for discarding messages when limits are reached.
+        discard_new_per_subject: when True, apply discard policy per
+            subject.
+        retention: message retention policy.
+        max_consumers: maximum number of consumers.
+        max_age: maximum message age.
+        max_message_size: maximum size of a single message in bytes.
+        storage: storage backend type.
+        num_replicas: number of stream replicas.
+        no_ack: when True, disable publish acknowledgements.
+        duplicate_window: time window for duplicate detection.
+        template_owner: name of the owning stream template.
+        sealed: when True, the stream is read-only.
+        description: human-readable stream description.
+        allow_rollup: when True, allow ``Nats-Rollup`` header to purge
+            subjects.
+        deny_delete: when True, deny message deletion via the API.
+        deny_purge: when True, deny stream purge via the API.
+        republish: configuration for republishing messages.
+        allow_direct: when True, enable direct get API for the stream.
+        mirror_direct: when True, enable direct get for mirror streams.
+        mirror: source configuration when the stream is a mirror.
+        sources: list of source configurations for aggregate streams.
+        metadata: custom key-value metadata.
+        subject_transform: subject transformation rule.
+        compression: compression algorithm for stored messages.
+        consumer_limits: default limits applied to new consumers.
+        first_sequence: initial sequence number for the stream.
+        placement: cluster and tag placement hints.
+        persist_mode: write persistence mode.
+        pause_until: timestamp until which the stream is paused.
+        allow_message_ttl: when True, allow per-message TTL.
+        subject_delete_marker_ttl: TTL for subject delete markers.
+        allow_atomic_publish: when True, enable atomic multi-message
+            publish.
+        allow_message_schedules: when True, enable scheduled message
+            delivery.
+        allow_message_counter: when True, enable message counter header.
+    """
+
     name: str
     subjects: list[str]
     max_bytes: int | None
@@ -201,6 +335,16 @@ class StreamConfig:
 
 @final
 class StreamMessage:
+    """A raw message stored in a JetStream stream.
+
+    Attributes:
+        subject: subject the message was published to.
+        sequence: sequence number of the message.
+        headers: message headers dictionary.
+        payload: message payload.
+        time: timestamp when the message was stored.
+    """
+
     subject: str
     sequence: int
     headers: dict[str, Any]
@@ -209,6 +353,21 @@ class StreamMessage:
 
 @final
 class StreamState:
+    """Current state snapshot of a JetStream stream.
+
+    Attributes:
+        messages: total number of messages in the stream.
+        bytes: total size of the stream in bytes.
+        first_sequence: sequence number of the first message.
+        first_timestamp: timestamp of the first message.
+        last_sequence: sequence number of the last message.
+        last_timestamp: timestamp of the last message.
+        consumer_count: number of consumers bound to the stream.
+        subjects_count: number of unique subjects in the stream.
+        deleted_count: number of deleted messages, if available.
+        deleted: list of deleted sequence numbers, if available.
+    """
+
     messages: int
     bytes: int
     first_sequence: int
@@ -222,6 +381,17 @@ class StreamState:
 
 @final
 class SourceInfo:
+    """Runtime information about a stream source.
+
+    Attributes:
+        name: name of the source stream.
+        lag: number of messages the source is behind.
+        active: duration since the last activity.
+        filter_subject: subject filter applied to the source.
+        subject_transform_dest: destination of the subject transform.
+        subject_transforms: list of subject transformation rules.
+    """
+
     name: str
     lag: int
     active: timedelta | None
@@ -231,6 +401,16 @@ class SourceInfo:
 
 @final
 class PeerInfo:
+    """Information about a stream cluster peer.
+
+    Attributes:
+        name: name of the peer server.
+        current: whether the peer is up to date.
+        active: duration since the last peer activity.
+        offline: whether the peer is offline.
+        lag: number of messages the peer is behind, if known.
+    """
+
     name: str
     current: bool
     active: timedelta
@@ -239,6 +419,18 @@ class PeerInfo:
 
 @final
 class ClusterInfo:
+    """Cluster information for a JetStream stream.
+
+    Attributes:
+        name: cluster name.
+        raft_group: Raft group name for the stream.
+        leader: name of the current leader server.
+        leader_since: timestamp when the current leader was elected.
+        system_account: whether this belongs to the system account.
+        traffic_account: traffic accounting identifier.
+        replicas: list of peer replicas.
+    """
+
     name: str | None
     raft_group: str | None
     leader: str | None
@@ -249,6 +441,17 @@ class ClusterInfo:
 
 @final
 class StreamInfo:
+    """Detailed information about a JetStream stream.
+
+    Attributes:
+        config: stream configuration.
+        created: timestamp when the stream was created.
+        state: current stream state.
+        cluster: cluster information, if applicable.
+        mirror: mirror source info, if the stream is a mirror.
+        sources: list of source info for aggregate streams.
+    """
+
     config: StreamConfig
     created: float
     state: StreamState
@@ -258,23 +461,29 @@ class StreamInfo:
 
 @final
 class Stream:
+    """A JetStream stream handle.
+
+    Provides methods for inspecting, purging, and directly
+    accessing messages in the stream, as well as managing consumers.
+    """
+
     async def direct_get(
         self,
         sequence: int,
         timeout: float | datetime | None = None,
     ) -> StreamMessage:
-        """
-        Get direct message from the stream.
+        """Get a message directly from the stream by sequence number.
 
         :param sequence: sequence number of the message to get.
-        :return: Message.
+        :param timeout: operation timeout.
+        :return: the stream message.
         """
 
     async def get_info(self, timeout: float | datetime | None = None) -> StreamInfo:
-        """
-        Get information about the stream.
+        """Get information about the stream.
 
-        :return: Stream info.
+        :param timeout: operation timeout.
+        :return: stream info.
         """
 
     async def purge(
@@ -284,15 +493,18 @@ class Stream:
         keep: int | None = None,
         timeout: float | datetime | None = None,
     ) -> int:
-        """
-        Purge current stream.
+        """Purge messages from the stream.
 
-        :param filter: filter of subjects to purge, defaults to None
-        :param sequence: Message sequence to purge up to (inclusive), defaults to None
-        :param keep: Message count to keep starting from the end of the stream,
-            defaults to None
-        :return: number of messages purged
+        :param filter: subject filter for messages to purge,
+            defaults to None.
+        :param sequence: purge messages up to this sequence number
+            inclusive, defaults to None.
+        :param keep: number of messages to keep starting from the end
+            of the stream, defaults to None.
+        :param timeout: operation timeout.
+        :return: number of messages purged.
         """
 
     @property
-    def consumers(self) -> ConsumersManager: ...
+    def consumers(self) -> ConsumersManager:
+        """Manager for consumers bound to this stream."""

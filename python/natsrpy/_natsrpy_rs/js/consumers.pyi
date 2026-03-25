@@ -18,6 +18,17 @@ __all__ = [
 
 @final
 class DeliverPolicy:
+    """Policy controlling which messages a consumer starts receiving.
+
+    Attributes:
+        ALL: deliver all available messages.
+        LAST: deliver starting with the last message.
+        NEW: deliver only new messages.
+        BY_START_SEQUENCE: deliver from a specific sequence number.
+        BY_START_TIME: deliver from a specific timestamp.
+        LAST_PER_SUBJECT: deliver the last message for each subject.
+    """
+
     ALL: DeliverPolicy
     LAST: DeliverPolicy
     NEW: DeliverPolicy
@@ -27,17 +38,43 @@ class DeliverPolicy:
 
 @final
 class AckPolicy:
+    """Acknowledgement policy for a consumer.
+
+    Attributes:
+        EXPLICIT: each message must be individually acknowledged.
+        NONE: no acknowledgement required.
+        ALL: acknowledging a message implicitly acknowledges all prior
+            messages.
+    """
+
     EXPLICIT: AckPolicy
     NONE: AckPolicy
     ALL: AckPolicy
 
 @final
 class ReplayPolicy:
+    """Replay speed policy for a consumer.
+
+    Attributes:
+        INSTANT: deliver messages as fast as possible.
+        ORIGINAL: deliver messages at the rate they were originally
+            published.
+    """
+
     INSTANT: ReplayPolicy
     ORIGINAL: ReplayPolicy
 
 @final
 class PriorityPolicy:
+    """Priority dispatch policy for a consumer.
+
+    Attributes:
+        NONE: no priority dispatching.
+        OVERFLOW: dispatch to priority groups on overflow.
+        PINNED_CLIENT: pin messages to a specific client.
+        PRIORITIZED: dispatch based on message priority.
+    """
+
     NONE: PriorityPolicy
     OVERFLOW: PriorityPolicy
     PINNED_CLIENT: PriorityPolicy
@@ -45,6 +82,42 @@ class PriorityPolicy:
 
 @final
 class PullConsumerConfig:
+    """Configuration for a pull-based JetStream consumer.
+
+    Attributes:
+        name: consumer name.
+        durable_name: durable consumer name for persistence across restarts.
+        description: human-readable consumer description.
+        deliver_policy: policy for initial message delivery.
+        delivery_start_sequence: starting sequence when using
+            ``BY_START_SEQUENCE`` deliver policy.
+        delivery_start_time: starting timestamp when using
+            ``BY_START_TIME`` deliver policy.
+        ack_policy: acknowledgement policy.
+        ack_wait: how long the server waits for an acknowledgement.
+        max_deliver: maximum number of delivery attempts per message.
+        filter_subject: subject filter for the consumer.
+        filter_subjects: list of subject filters for the consumer.
+        replay_policy: message replay speed policy.
+        rate_limit: rate limit in bits per second.
+        sample_frequency: percentage of acknowledgements to sample.
+        max_waiting: maximum pull requests waiting to be fulfilled.
+        max_ack_pending: maximum outstanding unacknowledged messages.
+        headers_only: when True, deliver only message headers.
+        max_batch: maximum messages per pull batch.
+        max_bytes: maximum bytes per pull batch.
+        max_expires: maximum pull request expiration duration.
+        inactive_threshold: duration before an inactive consumer is
+            removed.
+        num_replicas: number of consumer replicas.
+        memory_storage: when True, use in-memory storage.
+        metadata: custom key-value metadata.
+        backoff: list of durations for redelivery backoff.
+        priority_policy: priority dispatch policy.
+        priority_groups: list of priority group names.
+        pause_until: timestamp until which the consumer is paused.
+    """
+
     name: str | None
     durable_name: str | None
     description: str | None
@@ -108,6 +181,41 @@ class PullConsumerConfig:
 
 @final
 class PushConsumerConfig:
+    """Configuration for a push-based JetStream consumer.
+
+    Attributes:
+        deliver_subject: subject where messages are pushed to.
+        name: consumer name.
+        durable_name: durable consumer name for persistence across restarts.
+        description: human-readable consumer description.
+        deliver_group: queue group for load-balanced delivery.
+        deliver_policy: policy for initial message delivery.
+        delivery_start_sequence: starting sequence when using
+            ``BY_START_SEQUENCE`` deliver policy.
+        delivery_start_time: starting timestamp when using
+            ``BY_START_TIME`` deliver policy.
+        ack_policy: acknowledgement policy.
+        ack_wait: how long the server waits for an acknowledgement.
+        max_deliver: maximum number of delivery attempts per message.
+        filter_subject: subject filter for the consumer.
+        filter_subjects: list of subject filters for the consumer.
+        replay_policy: message replay speed policy.
+        rate_limit: rate limit in bits per second.
+        sample_frequency: percentage of acknowledgements to sample.
+        max_waiting: maximum pull requests waiting to be fulfilled.
+        max_ack_pending: maximum outstanding unacknowledged messages.
+        headers_only: when True, deliver only message headers.
+        flow_control: when True, enable flow control.
+        idle_heartbeat: interval for idle heartbeat messages.
+        num_replicas: number of consumer replicas.
+        memory_storage: when True, use in-memory storage.
+        metadata: custom key-value metadata.
+        backoff: list of durations for redelivery backoff.
+        inactive_threshold: duration before an inactive consumer is
+            removed.
+        pause_until: timestamp until which the consumer is paused.
+    """
+
     deliver_subject: str
     name: str | None
     durable_name: str | None
@@ -169,19 +277,41 @@ class PushConsumerConfig:
 
 @final
 class MessagesIterator:
+    """Async iterator over JetStream consumer messages."""
+
     def __aiter__(self) -> Self: ...
     async def __anext__(self) -> JetStreamMessage: ...
     async def next(
         self,
         timeout: float | timedelta | None = None,
-    ) -> JetStreamMessage: ...
+    ) -> JetStreamMessage:
+        """Receive the next message from the consumer.
+
+        :param timeout: maximum time to wait in seconds or as a timedelta,
+            defaults to None (wait indefinitely).
+        :return: the next JetStream message.
+        """
 
 @final
 class PushConsumer:
-    async def messages(self) -> MessagesIterator: ...
+    """A push-based JetStream consumer.
+
+    Messages are delivered by the server to a specified subject.
+    """
+
+    async def messages(self) -> MessagesIterator:
+        """Get an async iterator for consuming messages.
+
+        :return: an async iterator over JetStream messages.
+        """
 
 @final
 class PullConsumer:
+    """A pull-based JetStream consumer.
+
+    Messages are fetched on demand in batches by the client.
+    """
+
     async def fetch(
         self,
         max_messages: int | None = None,
@@ -193,4 +323,21 @@ class PullConsumer:
         min_pending: int | None = None,
         min_ack_pending: int | None = None,
         timeout: float | timedelta | None = None,
-    ) -> list[JetStreamMessage]: ...
+    ) -> list[JetStreamMessage]:
+        """Fetch a batch of messages from the consumer.
+
+        :param max_messages: maximum number of messages to fetch.
+        :param group: consumer group for priority dispatch.
+        :param priority: priority level for the fetch request.
+        :param max_bytes: maximum total bytes to fetch.
+        :param heartbeat: server heartbeat interval in seconds or as a
+            timedelta.
+        :param expires: fetch request expiration in seconds or as a
+            timedelta.
+        :param min_pending: minimum pending messages before pausing.
+        :param min_ack_pending: minimum unacknowledged messages before
+            pausing.
+        :param timeout: overall operation timeout in seconds or as a
+            timedelta.
+        :return: list of fetched messages.
+        """
