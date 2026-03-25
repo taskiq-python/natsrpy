@@ -1,7 +1,22 @@
 from datetime import timedelta
+from typing import final
 
 from natsrpy._natsrpy_rs.js import JetStreamMessage
+from typing_extensions import Self
 
+__all__ = [
+    "AckPolicy",
+    "DeliverPolicy",
+    "MessagesIterator",
+    "PriorityPolicy",
+    "PullConsumer",
+    "PullConsumerConfig",
+    "PushConsumer",
+    "PushConsumerConfig",
+    "ReplayPolicy",
+]
+
+@final
 class DeliverPolicy:
     ALL: DeliverPolicy
     LAST: DeliverPolicy
@@ -10,21 +25,25 @@ class DeliverPolicy:
     BY_START_TIME: DeliverPolicy
     LAST_PER_SUBJECT: DeliverPolicy
 
+@final
 class AckPolicy:
     EXPLICIT: AckPolicy
     NONE: AckPolicy
     ALL: AckPolicy
 
+@final
 class ReplayPolicy:
     INSTANT: ReplayPolicy
     ORIGINAL: ReplayPolicy
 
+@final
 class PriorityPolicy:
     NONE: PriorityPolicy
     OVERFLOW: PriorityPolicy
     PINNED_CLIENT: PriorityPolicy
     PRIORITIZED: PriorityPolicy
 
+@final
 class PullConsumerConfig:
     name: str | None
     durable_name: str | None
@@ -55,8 +74,8 @@ class PullConsumerConfig:
     priority_groups: list[str]
     pause_until: int | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str | None = None,
         durable_name: str | None = None,
         description: str | None = None,
@@ -85,8 +104,9 @@ class PullConsumerConfig:
         priority_policy: PriorityPolicy | None = None,
         priority_groups: list[str] | None = None,
         pause_until: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
+@final
 class PushConsumerConfig:
     deliver_subject: str
     name: str | None
@@ -116,8 +136,8 @@ class PushConsumerConfig:
     inactive_threshold: timedelta
     pause_until: int | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         deliver_subject: str,
         name: str | None = None,
         durable_name: str | None = None,
@@ -145,8 +165,9 @@ class PushConsumerConfig:
         backoff: list[timedelta] | None = None,
         inactive_threshold: timedelta | None = None,
         pause_until: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
+@final
 class MessagesIterator:
     def __aiter__(self) -> MessagesIterator: ...
     async def __anext__(self) -> JetStreamMessage: ...
@@ -155,9 +176,11 @@ class MessagesIterator:
         timeout: float | timedelta | None = None,
     ) -> JetStreamMessage: ...
 
+@final
 class PushConsumer:
     async def messages(self) -> MessagesIterator: ...
 
+@final
 class PullConsumer:
     async def fetch(
         self,

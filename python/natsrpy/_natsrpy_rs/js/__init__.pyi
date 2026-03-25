@@ -1,18 +1,60 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Literal, final, overload
 
+from . import consumers, kv, managers, object_store, stream
 from .managers import KVManager, ObjectStoreManager, StreamsManager
 
+__all__ = [
+    "JetStream",
+    "JetStreamMessage",
+    "Publication",
+    "consumers",
+    "kv",
+    "managers",
+    "object_store",
+    "stream",
+]
+
+@final
+class Publication:
+    stream: str
+    sequence: int
+    domain: str
+    duplicate: bool
+    value: str | None
+
+@final
 class JetStream:
+    @overload
     async def publish(
         self,
         subject: str,
         payload: str | bytes | bytearray | memoryview,
         *,
         headers: dict[str, str] | None = None,
-        reply: str | None = None,
         err_on_disconnect: bool = False,
+        wait: Literal[True],
+    ) -> Publication: ...
+    @overload
+    async def publish(
+        self,
+        subject: str,
+        payload: str | bytes | bytearray | memoryview,
+        *,
+        headers: dict[str, str] | None = None,
+        err_on_disconnect: bool = False,
+        wait: Literal[False] = False,
     ) -> None: ...
+    @overload
+    async def publish(
+        self,
+        subject: str,
+        payload: str | bytes | bytearray | memoryview,
+        *,
+        headers: dict[str, str] | None = None,
+        err_on_disconnect: bool = False,
+        wait: bool = False,
+    ) -> Publication | None: ...
     @property
     def kv(self) -> KVManager: ...
     @property
@@ -20,6 +62,7 @@ class JetStream:
     @property
     def object_store(self) -> ObjectStoreManager: ...
 
+@final
 class JetStreamMessage:
     @property
     def subject(self) -> str: ...

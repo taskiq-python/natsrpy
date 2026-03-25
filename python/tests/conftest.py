@@ -3,6 +3,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 from natsrpy import Nats
+from natsrpy.js import JetStream
 
 
 @pytest.fixture(scope="session")
@@ -29,3 +30,8 @@ async def nats(nats_url: str) -> AsyncGenerator[Nats, None]:
     yield nats
 
     await nats.shutdown()
+
+
+@pytest.fixture(scope="session")
+async def js(nats: Nats) -> JetStream:
+    return await nats.jetstream()

@@ -25,6 +25,7 @@ email = "s3riussan@gmail.com"
 [dependency-groups]
 dev = [
   "anyio>=4,<5",
+  "mypy>=1.19.1,<2",
   "pytest>=9,<10",
   "pytest-xdist>=3,<4",
 ]
@@ -110,6 +111,8 @@ ignore = [
   "SLF001",  # Private member accessed
   "S311",  # Standard pseudo-random generators are not suitable for security/cryptographic purposes
   "D101",  # Missing docstring in public class
+  "PLR2004",  # Magic value used in comparison
+  "B017",  # Do not assert blind exception
 ]
 
 [tool.ruff.lint.pydocstyle]

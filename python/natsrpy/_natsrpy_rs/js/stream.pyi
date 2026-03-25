@@ -1,55 +1,80 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, final
+
+from typing_extensions import Self
 
 from .managers import ConsumersManager
 
+__all__ = [
+    "ClusterInfo",
+    "Compression",
+    "ConsumerLimits",
+    "DiscardPolicy",
+    "External",
+    "PeerInfo",
+    "PersistenceMode",
+    "Placement",
+    "Republish",
+    "RetentionPolicy",
+    "Source",
+    "SourceInfo",
+    "StorageType",
+    "Stream",
+    "StreamConfig",
+    "StreamInfo",
+    "StreamMessage",
+    "StreamState",
+    "SubjectTransform",
+]
+
+@final
 class StorageType:
     FILE: StorageType
     MEMORY: StorageType
 
+@final
 class DiscardPolicy:
     OLD: DiscardPolicy
     NEW: DiscardPolicy
 
+@final
 class RetentionPolicy:
     LIMITS: RetentionPolicy
     INTEREST: RetentionPolicy
     WORKQUEUE: RetentionPolicy
 
+@final
 class Compression:
     S2: Compression
     NONE: Compression
 
+@final
 class PersistenceMode:
     Default: PersistenceMode
     Async: PersistenceMode
 
+@final
 class ConsumerLimits:
     inactive_threshold: timedelta
     max_ack_pending: int
 
-    def __init__(self, inactive_threshold: timedelta, max_ack_pending: int) -> None: ...
+    def __new__(cls, inactive_threshold: timedelta, max_ack_pending: int) -> Self: ...
 
+@final
 class External:
     api_prefix: str
     delivery_prefix: str | None
 
-    def __init__(
-        self,
-        api_prefix: str,
-        delivery_prefix: str | None = None,
-    ) -> None: ...
+    def __new__(cls, api_prefix: str, delivery_prefix: str | None = None) -> Self: ...
 
+@final
 class SubjectTransform:
     source: str
     destination: str
 
-    def __init__(
-        self,
-        source: str,
-        destination: str,
-    ) -> None: ...
+    def __new__(cls, source: str, destination: str) -> Self: ...
 
+@final
 class Source:
     name: str
     filter_subject: str | None = None
@@ -59,8 +84,8 @@ class Source:
     domain: str | None = None
     subject_transforms: SubjectTransform | None = None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str,
         filter_subject: str | None = None,
         external: External | None = None,
@@ -68,30 +93,28 @@ class Source:
         start_time: int | None = None,
         domain: str | None = None,
         subject_transforms: SubjectTransform | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
+@final
 class Placement:
     cluster: str | None
     tags: list[str] | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         cluster: str | None = None,
         tags: list[str] | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
+@final
 class Republish:
     source: str
     destination: str
     headers_only: bool
 
-    def __init__(
-        self,
-        source: str,
-        destination: str,
-        headers_only: bool,
-    ) -> None: ...
+    def __new__(cls, source: str, destination: str, headers_only: bool) -> Self: ...
 
+@final
 class StreamConfig:
     name: str
     subjects: list[str]
@@ -133,8 +156,8 @@ class StreamConfig:
     allow_message_schedules: bool | None
     allow_message_counter: bool | None
 
-    def __init__(
-        self,
+    def __new__(
+        cls,
         name: str,
         subjects: list[str],
         max_bytes: int | None = None,
@@ -174,8 +197,9 @@ class StreamConfig:
         allow_atomic_publish: bool | None = None,
         allow_message_schedules: bool | None = None,
         allow_message_counter: bool | None = None,
-    ) -> None: ...
+    ) -> Self: ...
 
+@final
 class StreamMessage:
     subject: str
     sequence: int
@@ -183,6 +207,7 @@ class StreamMessage:
     payload: bytes
     time: datetime
 
+@final
 class StreamState:
     messages: int
     bytes: int
@@ -195,6 +220,7 @@ class StreamState:
     deleted_count: int | None
     deleted: list[int] | None
 
+@final
 class SourceInfo:
     name: str
     lag: int
@@ -203,6 +229,7 @@ class SourceInfo:
     subject_transform_dest: str | None
     subject_transforms: list[SubjectTransform]
 
+@final
 class PeerInfo:
     name: str
     current: bool
@@ -210,6 +237,7 @@ class PeerInfo:
     offline: bool
     lag: int | None
 
+@final
 class ClusterInfo:
     name: str | None
     raft_group: str | None
@@ -219,6 +247,7 @@ class ClusterInfo:
     traffic_account: str | None
     replicas: list[PeerInfo]
 
+@final
 class StreamInfo:
     config: StreamConfig
     created: float
@@ -227,8 +256,13 @@ class StreamInfo:
     mirror: SourceInfo | None
     sources: list[SourceInfo]
 
+@final
 class Stream:
-    async def direct_get(self, sequence: int) -> StreamMessage:
+    async def direct_get(
+        self,
+        sequence: int,
+        timeout: float | datetime | None = None,
+    ) -> StreamMessage:
         """
         Get direct message from the stream.
 
@@ -236,7 +270,7 @@ class Stream:
         :return: Message.
         """
 
-    async def get_info(self) -> StreamInfo:
+    async def get_info(self, timeout: float | datetime | None = None) -> StreamInfo:
         """
         Get information about the stream.
 
@@ -248,6 +282,7 @@ class Stream:
         filter: str | None = None,
         sequence: int | None = None,
         keep: int | None = None,
+        timeout: float | datetime | None = None,
     ) -> int:
         """
         Purge current stream.

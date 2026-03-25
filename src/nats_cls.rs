@@ -37,7 +37,7 @@ impl NatsCls {
     #[new]
     #[pyo3(signature = (
         /,
-        addrs=vec![String::from("nats://localhost:4222")],
+        addrs=None,
         user_and_pass=None,
         nkey=None,
         token=None,
@@ -49,7 +49,7 @@ impl NatsCls {
         request_timeout=TimeValue::FloatSecs(10.0),
     ))]
     fn __new__(
-        addrs: Vec<String>,
+        addrs: Option<Vec<String>>,
         user_and_pass: Option<(String, String)>,
         nkey: Option<String>,
         token: Option<String>,
@@ -71,7 +71,7 @@ impl NatsCls {
             max_reconnects,
             connection_timeout,
             request_timeout,
-            addr: addrs,
+            addr: addrs.unwrap_or_else(|| vec![String::from("nats://localhost:4222")]),
         }
     }
 
