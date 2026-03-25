@@ -61,12 +61,12 @@ impl KVConfig {
         limit_markers=None,
     ))]
     #[must_use]
-    pub const fn __new__(
+    pub fn __new__(
         bucket: String,
         description: Option<String>,
         max_value_size: Option<i32>,
         history: Option<i64>,
-        max_age: Option<Duration>,
+        max_age: Option<TimeValue>,
         max_bytes: Option<i64>,
         storage: Option<js::stream::StorageType>,
         num_replicas: Option<usize>,
@@ -76,14 +76,14 @@ impl KVConfig {
         mirror_direct: Option<bool>,
         compression: Option<bool>,
         placement: Option<js::stream::Placement>,
-        limit_markers: Option<Duration>,
+        limit_markers: Option<TimeValue>,
     ) -> Self {
         Self {
             bucket,
             description,
             max_value_size,
             history,
-            max_age,
+            max_age: max_age.map(Into::into),
             max_bytes,
             storage,
             num_replicas,
@@ -93,7 +93,7 @@ impl KVConfig {
             mirror_direct,
             compression,
             placement,
-            limit_markers,
+            limit_markers: limit_markers.map(Into::into),
         }
     }
 }

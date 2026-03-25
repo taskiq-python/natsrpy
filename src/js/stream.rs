@@ -160,9 +160,9 @@ pub struct ConsumerLimits {
 impl ConsumerLimits {
     #[new]
     #[must_use]
-    pub const fn __new__(inactive_threshold: Duration, max_ack_pending: i64) -> Self {
+    pub fn __new__(inactive_threshold: TimeValue, max_ack_pending: i64) -> Self {
         Self {
-            inactive_threshold,
+            inactive_threshold: inactive_threshold.into(),
             max_ack_pending,
         }
     }
@@ -595,12 +595,12 @@ impl StreamConfig {
         discard_new_per_subject: Option<bool>,
         retention: Option<RetentionPolicy>,
         max_consumers: Option<i32>,
-        max_age: Option<Duration>,
+        max_age: Option<TimeValue>,
         max_message_size: Option<i32>,
         storage: Option<StorageType>,
         num_replicas: Option<usize>,
         no_ack: Option<bool>,
-        duplicate_window: Option<Duration>,
+        duplicate_window: Option<TimeValue>,
         template_owner: Option<String>,
         sealed: Option<bool>,
         description: Option<String>,
@@ -621,7 +621,7 @@ impl StreamConfig {
         persist_mode: Option<PersistenceMode>,
         pause_until: Option<i64>,
         allow_message_ttl: Option<bool>,
-        subject_delete_marker_ttl: Option<Duration>,
+        subject_delete_marker_ttl: Option<TimeValue>,
         allow_atomic_publish: Option<bool>,
         allow_message_schedules: Option<bool>,
         allow_message_counter: Option<bool>,
@@ -640,8 +640,8 @@ impl StreamConfig {
             placement,
             persist_mode,
             pause_until,
-            subject_delete_marker_ttl,
 
+            subject_delete_marker_ttl: subject_delete_marker_ttl.map(Into::into),
             max_bytes: max_bytes.unwrap_or_default(),
             max_messages: max_messages.unwrap_or_default(),
             max_messages_per_subject: max_messages_per_subject.unwrap_or_default(),
@@ -649,12 +649,12 @@ impl StreamConfig {
             discard_new_per_subject: discard_new_per_subject.unwrap_or_default(),
             retention: retention.unwrap_or_default(),
             max_consumers: max_consumers.unwrap_or_default(),
-            max_age: max_age.unwrap_or_default(),
+            max_age: max_age.unwrap_or_default().into(),
             max_message_size: max_message_size.unwrap_or_default(),
             storage: storage.unwrap_or_default(),
             num_replicas: num_replicas.unwrap_or_default(),
             no_ack: no_ack.unwrap_or_default(),
-            duplicate_window: duplicate_window.unwrap_or_default(),
+            duplicate_window: duplicate_window.unwrap_or_default().into(),
             template_owner: template_owner.unwrap_or_default(),
             sealed: sealed.unwrap_or_default(),
             allow_rollup: allow_rollup.unwrap_or_default(),

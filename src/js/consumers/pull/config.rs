@@ -3,6 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use crate::{
     exceptions::rust_err::NatsrpyError,
     js::consumers::common::{AckPolicy, DeliverPolicy, PriorityPolicy, ReplayPolicy},
+    utils::py_types::TimeValue,
 };
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
@@ -80,7 +81,7 @@ impl PullConsumerConfig {
         delivery_start_sequence: Option<u64>,
         delivery_start_time: Option<i64>,
         ack_policy: Option<AckPolicy>,
-        ack_wait: Option<Duration>,
+        ack_wait: Option<TimeValue>,
         max_deliver: Option<i64>,
         filter_subject: Option<String>,
         filter_subjects: Option<Vec<String>>,
@@ -92,12 +93,12 @@ impl PullConsumerConfig {
         headers_only: Option<bool>,
         max_batch: Option<i64>,
         max_bytes: Option<i64>,
-        max_expires: Option<Duration>,
-        inactive_threshold: Option<Duration>,
+        max_expires: Option<TimeValue>,
+        inactive_threshold: Option<TimeValue>,
         num_replicas: Option<usize>,
         memory_storage: Option<bool>,
         metadata: Option<HashMap<String, String>>,
-        backoff: Option<Vec<Duration>>,
+        backoff: Option<Vec<TimeValue>>,
         priority_policy: Option<PriorityPolicy>,
         priority_groups: Option<Vec<String>>,
         pause_until: Option<i64>,
@@ -114,7 +115,7 @@ impl PullConsumerConfig {
 
         conf.deliver_policy = deliver_policy.unwrap_or_default();
         conf.ack_policy = ack_policy.unwrap_or_default();
-        conf.ack_wait = ack_wait.unwrap_or_default();
+        conf.ack_wait = ack_wait.unwrap_or_default().into();
         conf.max_deliver = max_deliver.unwrap_or_default();
         conf.filter_subject = filter_subject.unwrap_or_default();
         conf.filter_subjects = filter_subjects.unwrap_or_default();
@@ -126,12 +127,16 @@ impl PullConsumerConfig {
         conf.headers_only = headers_only.unwrap_or_default();
         conf.max_batch = max_batch.unwrap_or_default();
         conf.max_bytes = max_bytes.unwrap_or_default();
-        conf.max_expires = max_expires.unwrap_or_default();
-        conf.inactive_threshold = inactive_threshold.unwrap_or_default();
+        conf.max_expires = max_expires.unwrap_or_default().into();
+        conf.inactive_threshold = inactive_threshold.unwrap_or_default().into();
         conf.num_replicas = num_replicas.unwrap_or_default();
         conf.memory_storage = memory_storage.unwrap_or_default();
         conf.metadata = metadata.unwrap_or_default();
-        conf.backoff = backoff.unwrap_or_default();
+        conf.backoff = backoff
+            .unwrap_or_default()
+            .into_iter()
+            .map(Into::into)
+            .collect();
         conf.priority_policy = priority_policy.unwrap_or_default();
         conf.priority_groups = priority_groups.unwrap_or_default();
 

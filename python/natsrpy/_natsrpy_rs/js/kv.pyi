@@ -93,7 +93,7 @@ class KVConfig:
         description: str | None = None,
         max_value_size: int | None = None,
         history: int | None = None,
-        max_age: float | None = None,
+        max_age: float | timedelta | None = None,
         max_bytes: int | None = None,
         storage: StorageType | None = None,
         num_replicas: int | None = None,
@@ -103,7 +103,7 @@ class KVConfig:
         mirror_direct: bool | None = None,
         compression: bool | None = None,
         placement: Placement | None = None,
-        limit_markers: float | None = None,
+        limit_markers: float | timedelta | None = None,
     ) -> Self: ...
 
 @final
