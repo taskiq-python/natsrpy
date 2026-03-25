@@ -70,3 +70,10 @@ repos:
         pass_filenames: false
         args:
           - check
+
+      - id: stubtest
+        name: python stubtest
+        language: python
+        entry: python ./scripts/stubtest.py
+        pass_filenames:  false
+        always_run: true
