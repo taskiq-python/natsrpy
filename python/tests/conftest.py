@@ -27,9 +27,10 @@ async def nats(nats_url: str) -> AsyncGenerator[Nats, None]:
     nats = Nats(addrs=[nats_url])
     await nats.startup()
 
-    yield nats
-
-    await nats.shutdown()
+    try:
+        yield nats
+    finally:
+        await nats.shutdown()
 
 
 @pytest.fixture(scope="session")

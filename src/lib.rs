@@ -41,6 +41,9 @@ pub mod _natsrpy_rs {
     use super::subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription};
 
     #[pymodule_export]
+    use super::exceptions::py_err::pymod as exceptions;
+
+    #[pymodule_export]
     use super::js::pymod as js;
 
     #[pymodule_init]

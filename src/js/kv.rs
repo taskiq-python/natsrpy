@@ -181,18 +181,15 @@ impl KeyValue {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         let data = bytes::Bytes::copy_from_slice(value.as_bytes());
-        natsrpy_future(py, async move {
-            let status = store.read().await.put(key, data).await?;
-            Ok(status)
-        })
+        natsrpy_future(
+            py,
+            async move { Ok(store.read().await.put(key, data).await?) },
+        )
     }
 
     pub fn delete<'py>(&self, py: Python<'py>, key: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
-        natsrpy_future(py, async move {
-            let kv = store.read().await;
-            Ok(kv.delete(key).await?)
-        })
+        natsrpy_future(py, async move { Ok(store.read().await.delete(key).await?) })
     }
 }
 

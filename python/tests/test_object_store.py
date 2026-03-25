@@ -5,13 +5,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import pytest
-from natsrpy._natsrpy_rs.js.object_store import (
+from natsrpy.js import (
+    JetStream,
     ObjectInfo,
     ObjectInfoIterator,
     ObjectLink,
-)
-from natsrpy.js import (
-    JetStream,
     ObjectStore,
     ObjectStoreConfig,
     StorageType,

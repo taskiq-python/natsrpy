@@ -1,0 +1,9 @@
+class NatsrpyBaseError(Exception): ...
+class NatsrpySessionError(NatsrpyBaseError): ...
+class NatsrpyPublishError(NatsrpyBaseError): ...
+
+__all__ = [
+    "NatsrpyBaseError",
+    "NatsrpyPublishError",
+    "NatsrpySessionError",
+]
