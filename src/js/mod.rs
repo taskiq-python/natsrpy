@@ -10,7 +10,8 @@ pub mod stream;
 pub mod pymod {
     // Classes
     #[pymodule_export]
-    pub use super::jetstream::JetStream;
+    pub use super::jetstream::{JetStream, Publication};
+
     #[pymodule_export]
     pub use super::message::JetStreamMessage;
 

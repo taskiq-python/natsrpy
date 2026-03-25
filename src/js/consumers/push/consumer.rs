@@ -60,6 +60,7 @@ impl MessagesIterator {
         slf
     }
 
+    #[pyo3(signature=(timeout=None))]
     pub fn next<'py>(
         &self,
         py: Python<'py>,

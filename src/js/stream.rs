@@ -353,7 +353,7 @@ impl Source {
         start_sequence = None,
         start_time=None,
         domain=None,
-        subject_transforms = vec![]
+        subject_transforms = None
     ))]
     pub fn __new__(
         name: String,
@@ -362,7 +362,7 @@ impl Source {
         start_sequence: Option<u64>,
         start_time: Option<i64>,
         domain: Option<String>,
-        subject_transforms: Vec<Bound<'_, SubjectTransform>>,
+        subject_transforms: Option<Vec<Bound<'_, SubjectTransform>>>,
     ) -> NatsrpyResult<Self> {
         Ok(Self {
             name,
@@ -371,6 +371,7 @@ impl Source {
             start_sequence,
             filter_subject,
             subject_transforms: subject_transforms
+                .unwrap_or_default()
                 .into_iter()
                 .map(|val| val.borrow().deref().clone())
                 .collect(),

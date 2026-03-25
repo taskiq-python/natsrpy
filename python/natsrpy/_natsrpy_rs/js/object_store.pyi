@@ -39,13 +39,13 @@ class ObjectStore:
         self,
         name: str,
         writer: Writer[bytes],
-        chunk_size: int | None = 24576,
+        chunk_size: int | None = ...,  # 24MB
     ) -> None: ...
     async def put(
         self,
         name: str,
         value: bytes | str,
-        chunk_size: int = 24576,
+        chunk_size: int = ...,  # 24MB
         description: str | None = None,
         headers: dict[str, str | list[str]] | None = None,
         metadata: dict[str, str] | None = None,
