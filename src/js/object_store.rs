@@ -1,16 +1,25 @@
+use futures_util::StreamExt;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_nats::HeaderMap;
-use pyo3::{Bound, Py, PyAny, Python, types::PyDict};
-use tokio::{io::AsyncReadExt, sync::RwLock};
+use pyo3::{
+    Bound, Py, PyAny, PyRef, Python,
+    types::{IntoPyDict, PyDateTime, PyDict},
+};
+use tokio::{
+    io::AsyncReadExt,
+    sync::{Mutex, RwLock},
+};
 
 use crate::{
-    exceptions::rust_err::NatsrpyResult,
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::stream::{Placement, StorageType},
     utils::{
+        futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
         natsrpy_future,
-        py_types::{SendableValue, TimeValue},
+        py_types::{SendableValue, TimeValue, ToPyDate},
+        streamer::Streamer,
     },
 };
 
@@ -25,6 +34,95 @@ pub struct ObjectStoreConfig {
     pub num_replicas: usize,
     pub compression: bool,
     pub placement: Option<Placement>,
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Debug, Clone)]
+pub struct ObjectLink {
+    pub name: Option<String>,
+    pub bucket: String,
+}
+
+#[pyo3::pyclass(get_all)]
+#[derive(Debug)]
+pub struct ObjectInfo {
+    pub name: String,
+    pub description: Option<String>,
+    pub metadata: Py<PyDict>,
+    pub headers: Py<PyDict>,
+    pub bucket: String,
+    pub nuid: String,
+    pub size: usize,
+    pub chunks: usize,
+    pub modified: Option<Py<PyDateTime>>,
+    pub digest: Option<String>,
+    pub deleted: bool,
+
+    pub link: Option<ObjectLink>,
+    pub max_chunk_size: Option<usize>,
+}
+
+impl From<async_nats::jetstream::object_store::ObjectLink> for ObjectLink {
+    fn from(value: async_nats::jetstream::object_store::ObjectLink) -> Self {
+        Self {
+            name: value.name,
+            bucket: value.bucket,
+        }
+    }
+}
+
+impl TryFrom<async_nats::jetstream::object_store::ObjectInfo> for ObjectInfo {
+    type Error = NatsrpyError;
+
+    fn try_from(
+        value: async_nats::jetstream::object_store::ObjectInfo,
+    ) -> Result<Self, Self::Error> {
+        Ok(Self {
+            name: value.name,
+            description: value.description,
+            metadata: Python::attach(|gil| {
+                value.metadata.into_py_dict(gil).map(pyo3::Bound::unbind)
+            })?,
+            headers: value
+                .headers
+                // To PyResul<Bound<'_, PyDict>> and then to PyResul<Py<PyDict>>
+                .map(|val| Python::attach(|gil| val.to_pydict(gil).map(pyo3::Bound::unbind)))
+                .transpose()?
+                .unwrap_or_else(|| Python::attach(|gil| PyDict::new(gil).unbind())),
+            bucket: value.bucket,
+            nuid: value.nuid,
+            size: value.size,
+            chunks: value.chunks,
+            modified: value
+                .modified
+                // To PyResul<Bound<'_, PyDateTime>> and then to PyResul<Py<PyDateTime>>
+                .map(|dt| Python::attach(|gil| dt.to_py_date(gil).map(pyo3::Bound::unbind)))
+                .transpose()?,
+            digest: value.digest,
+            deleted: value.deleted,
+            link: value
+                .options
+                .as_ref()
+                .and_then(|opts| opts.link.as_ref().map(|link| link.clone().into())),
+            max_chunk_size: value.options.and_then(|opts| opts.max_chunk_size),
+        })
+    }
+}
+
+#[pyo3::pymethods]
+impl ObjectInfo {
+    pub fn __str__(&self) -> String {
+        format!(
+            "ObjectInfo<name={:?}, bucket={:?}, size={}, modified={:?}, description={:?}>",
+            self.name,
+            self.bucket,
+            self.size,
+            self.modified
+                .as_ref()
+                .map_or_else(|| String::from("None"), ToString::to_string),
+            self.description,
+        )
+    }
 }
 
 impl From<ObjectStoreConfig> for async_nats::jetstream::object_store::Config {
@@ -188,10 +286,171 @@ impl ObjectStore {
             Ok(())
         })
     }
+
+    #[pyo3(signature=(
+        name,
+        new_name=None,
+        description=None,
+        headers=None,
+        metadata=None,
+    ))]
+    pub fn update_metadata<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+        new_name: Option<String>,
+        description: Option<String>,
+        headers: Option<Bound<'py, PyDict>>,
+        metadata: Option<HashMap<String, String>>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        let headers = headers.map(|val| HeaderMap::from_pydict(val)).transpose()?;
+        let meta = async_nats::jetstream::object_store::UpdateMetadata {
+            name: new_name.unwrap_or_else(|| name.clone()),
+            description,
+            metadata: metadata.unwrap_or_default(),
+            headers,
+        };
+        natsrpy_future(py, async move {
+            ObjectInfo::try_from(ctx_guard.read().await.update_metadata(name, meta).await?)
+        })
+    }
+
+    pub fn seal<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            ctx_guard.write().await.seal().await?;
+            Ok(())
+        })
+    }
+
+    pub fn get_info<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            let info = ctx_guard.write().await.info(name).await?;
+            ObjectInfo::try_from(info)
+        })
+    }
+
+    #[pyo3(signature=(with_history=false))]
+    pub fn watch<'py>(
+        &self,
+        py: Python<'py>,
+        with_history: bool,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            let watcher = if with_history {
+                ctx_guard.read().await.watch_with_history().await?
+            } else {
+                ctx_guard.read().await.watch().await?
+            };
+            Ok(ObjectInfoIterator::new(Streamer::new(watcher)))
+        })
+    }
+
+    pub fn list<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            Ok(ObjectInfoIterator::new(Streamer::new(
+                ctx_guard.read().await.list().await?,
+            )))
+        })
+    }
+
+    pub fn link_bucket<'py>(
+        &self,
+        py: Python<'py>,
+        src_bucket: String,
+        dest: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            ObjectInfo::try_from(
+                ctx_guard
+                    .read()
+                    .await
+                    .add_bucket_link(dest, src_bucket)
+                    .await?,
+            )
+        })
+    }
+
+    pub fn link_object<'py>(
+        &self,
+        py: Python<'py>,
+        src: String,
+        dest: String,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        natsrpy_future(py, async move {
+            let target = ctx_guard.read().await.get(src).await?;
+            ObjectInfo::try_from(ctx_guard.read().await.add_link(dest, &target.info).await?)
+        })
+    }
+}
+
+#[pyo3::pyclass(from_py_object)]
+#[derive(Clone, Debug)]
+pub struct ObjectInfoIterator {
+    streamer: Arc<
+        Mutex<
+            Streamer<
+                Result<
+                    async_nats::jetstream::object_store::ObjectInfo,
+                    async_nats::jetstream::object_store::WatcherError,
+                >,
+            >,
+        >,
+    >,
+}
+
+impl ObjectInfoIterator {
+    #[must_use]
+    pub fn new(
+        streamer: Streamer<
+            Result<
+                async_nats::jetstream::object_store::ObjectInfo,
+                async_nats::jetstream::object_store::WatcherError,
+            >,
+        >,
+    ) -> Self {
+        Self {
+            streamer: Arc::new(Mutex::new(streamer)),
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl ObjectInfoIterator {
+    #[must_use]
+    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    #[pyo3(signature=(timeout=None))]
+    pub fn next<'py>(
+        &self,
+        py: Python<'py>,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.streamer.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let value = ctx.lock().await.next().await;
+            match value {
+                Some(info) => ObjectInfo::try_from(info?),
+                None => Err(NatsrpyError::AsyncStopIteration),
+            }
+        })
+    }
+
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        self.next(py, None)
+    }
 }
 
 #[pyo3::pymodule(submodule, name = "object_store")]
 pub mod pymod {
     #[pymodule_export]
-    pub use super::{ObjectStore, ObjectStoreConfig};
+    pub use super::{ObjectInfo, ObjectInfoIterator, ObjectLink, ObjectStore, ObjectStoreConfig};
 }
