@@ -88,6 +88,20 @@ pub enum NatsrpyError {
     ObjectStorePutError(#[from] async_nats::jetstream::object_store::PutError),
     #[error(transparent)]
     ObjectStoreDeleteError(#[from] async_nats::jetstream::object_store::DeleteError),
+    #[error(transparent)]
+    ObjectStoreSealError(#[from] async_nats::jetstream::object_store::SealError),
+    #[error(transparent)]
+    ObjectStoreInfoError(#[from] async_nats::jetstream::object_store::InfoError),
+    #[error(transparent)]
+    ObjectStoreWatchError(#[from] async_nats::jetstream::object_store::WatchError),
+    #[error(transparent)]
+    ObjectStoreWatcherError(#[from] async_nats::jetstream::object_store::WatcherError),
+    #[error(transparent)]
+    ObjectStoreAddLinkError(#[from] async_nats::jetstream::object_store::AddLinkError),
+    #[error(transparent)]
+    ObjectStoreUpdateMetadataError(
+        #[from] async_nats::jetstream::object_store::UpdateMetadataError,
+    ),
 }
 
 impl From<NatsrpyError> for pyo3::PyErr {
