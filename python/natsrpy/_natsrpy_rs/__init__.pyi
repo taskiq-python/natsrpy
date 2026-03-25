@@ -4,7 +4,7 @@ from typing import Any, final, overload
 
 from typing_extensions import Self
 
-from . import js
+from . import exceptions, js
 
 @final
 class Message:
@@ -107,4 +107,11 @@ class Nats:
         backpressure_on_inflight: bool | None = None,
     ) -> js.JetStream: ...
 
-__all__ = ["CallbackSubscription", "IteratorSubscription", "Message", "Nats", "js"]
+__all__ = [
+    "CallbackSubscription",
+    "IteratorSubscription",
+    "Message",
+    "Nats",
+    "exceptions",
+    "js",
+]
