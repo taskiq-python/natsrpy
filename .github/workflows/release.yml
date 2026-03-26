@@ -32,7 +32,7 @@ jobs:
           python-version: 3.x
       - name: Setting correct version
         run: |
-          python scripts/bump_version.py "${{ github.ref_name }}"
+          python scripts/bump_version.py "${{ github.event.release.tag_name }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -77,7 +77,7 @@ jobs:
           python-version: 3.x
       - name: Setting correct version
         run: |
-          python scripts/bump_version.py "${{ github.ref_name }}"
+          python scripts/bump_version.py "${{ github.event.release.tag_name }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -126,7 +126,7 @@ jobs:
           architecture: ${{ matrix.platform.python_arch }}
       - name: Setting correct version
         run: |
-          python scripts/bump_version.py "${{ github.ref_name }}"
+          python scripts/bump_version.py "${{ github.event.release.tag_name }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -162,7 +162,7 @@ jobs:
           python-version: 3.x
       - name: Setting correct version
         run: |
-          python scripts/bump_version.py "${{ github.ref_name }}"
+          python scripts/bump_version.py "${{ github.event.release.tag_name }}"
       - name: Build wheels
         uses: PyO3/maturin-action@v1
         with:
@@ -190,7 +190,7 @@ jobs:
           python-version: 3.x
       - name: Setting correct version
         run: |
-          python scripts/bump_version.py "${{ github.ref_name }}"
+          python scripts/bump_version.py "${{ github.event.release.tag_name }}"
       - name: Build sdist
         uses: PyO3/maturin-action@v1
         with:
