@@ -206,12 +206,14 @@ class Nats:
         self,
         subject: str,
         callback: Callable[[Message], Awaitable[None]],
+        queue: str | None = None,
     ) -> Future[CallbackSubscription]: ...
     @overload
     def subscribe(
         self,
         subject: str,
         callback: None = None,
+        queue: str | None = None,
     ) -> Future[IteratorSubscription]: ...
     def jetstream(
         self,

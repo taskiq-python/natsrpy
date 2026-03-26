@@ -1,8 +1,5 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
-use pyo3::{
-    Bound, IntoPyObjectExt, Py, PyAny, Python,
-    types::{PyBytes, PyBytesMethods, PyDict},
-};
+use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, Python, types::PyDict};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -126,11 +123,15 @@ impl NatsCls {
         err_on_disconnect: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
-        log::info!("Payload: {payload:?}");
-        let data = payload.into();
+        let data = bytes::Bytes::from(payload);
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
+        log::debug!(
+            "Nats.publish is called with a message to subject '{}' with payload of size {} bytes",
+            subject,
+            data.len()
+        );
         natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
                 if err_on_disconnect
@@ -158,16 +159,21 @@ impl NatsCls {
         &self,
         py: Python<'py>,
         subject: String,
-        payload: Option<Bound<PyBytes>>,
+        payload: Option<SendableValue>,
         headers: Option<Bound<PyDict>>,
         inbox: Option<String>,
         timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let session = self.nats_session.clone();
-        let data = payload.map(|inner| bytes::Bytes::from(inner.as_bytes().to_vec()));
+        let data = payload.map(bytes::Bytes::from);
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
+        log::debug!(
+            "Nats.request is called with a message to subject '{}' with payload of size {} bytes",
+            subject,
+            data.as_ref().map_or(0, bytes::Bytes::len)
+        );
         natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
                 let request = async_nats::Request {
@@ -196,22 +202,28 @@ impl NatsCls {
         })
     }
 
-    #[pyo3(signature=(subject, callback=None))]
+    #[pyo3(signature=(subject, callback=None, queue=None))]
     pub fn subscribe<'py>(
         &self,
         py: Python<'py>,
         subject: String,
         callback: Option<Py<PyAny>>,
+        queue: Option<String>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Subscribing to '{subject}'");
         let session = self.nats_session.clone();
         natsrpy_future(py, async move {
             if let Some(session) = session.read().await.as_ref() {
+                let subscriber = if let Some(queue) = queue {
+                    session.queue_subscribe(subject, queue).await?
+                } else {
+                    session.subscribe(subject).await?
+                };
                 if let Some(cb) = callback {
-                    let sub = CallbackSubscription::new(session.subscribe(subject).await?, cb)?;
+                    let sub = CallbackSubscription::new(subscriber, cb)?;
                     Ok(Python::attach(|gil| sub.into_py_any(gil))?)
                 } else {
-                    let sub = IteratorSubscription::new(session.subscribe(subject).await?);
+                    let sub = IteratorSubscription::new(subscriber);
                     Ok(Python::attach(|gil| sub.into_py_any(gil))?)
                 }
             } else {

@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use futures_util::StreamExt;
 use pyo3::{Bound, Py, PyAny, Python};
@@ -14,6 +14,7 @@ pub struct CallbackSubscription {
 
 async fn process_message(message: async_nats::message::Message, py_callback: Py<PyAny>) {
     let task = async || -> NatsrpyResult<()> {
+        log::debug!("Received message: {:?}. Processing ...", &message);
         let message = crate::message::Message::try_from(&message)?;
         let awaitable = Python::attach(|gil| -> NatsrpyResult<_> {
             let res = py_callback.call1(gil, (message,))?;
@@ -21,6 +22,7 @@ async fn process_message(message: async_nats::message::Message, py_callback: Py<
             Ok(rust_task)
         })?;
         awaitable.await?;
+        log::debug!("Python callback successfully awaited.");
         Ok(())
     };
     if let Err(err) = task().await {
@@ -33,13 +35,32 @@ async fn start_py_sub(
     py_callback: Py<PyAny>,
     locals: pyo3_async_runtimes::TaskLocals,
 ) {
-    while let Some(message) = sub.lock().await.next().await {
+    loop {
+        let message = {
+            let mut sub_guard = sub.lock().await;
+            // We wait up to 0.2 second for new messages.
+            // If this thing doesn't resolve in this period,
+            // we just release the lock. Otherwise it would be impossible to
+            // unsubscribe.
+            match tokio::time::timeout(Duration::from_millis(200), sub_guard.next()).await {
+                Ok(Some(message)) => message,
+                Ok(None) => break,
+                _ => continue,
+            }
+        };
         let py_cb = Python::attach(|py| py_callback.clone_ref(py));
         tokio::spawn(pyo3_async_runtimes::tokio::scope(
             locals.clone(),
             process_message(message, py_cb),
         ));
     }
+    // while let Some(message) = sub.lock().await.next().await {
+    //     let py_cb = Python::attach(|py| py_callback.clone_ref(py));
+    //     tokio::spawn(pyo3_async_runtimes::tokio::scope(
+    //         locals.clone(),
+    //         process_message(message, py_cb),
+    //     ));
+    // }
 }
 
 impl CallbackSubscription {

@@ -166,6 +166,21 @@ pub struct KVEntry {
     pub seen_current: bool,
 }
 
+#[pyo3::pymethods]
+impl KVEntry {
+    #[must_use]
+    pub fn __repr__(&self) -> String {
+        format!(
+            "KVEntry<bucket={bucket:?}, key={key:?}, value={value}, revision={revision}, created={created}>",
+            bucket = self.bucket,
+            key = self.key,
+            value = self.value,
+            revision = self.revision,
+            created = self.created,
+        )
+    }
+}
+
 impl TryFrom<async_nats::jetstream::kv::Entry> for KVEntry {
     type Error = NatsrpyError;
 

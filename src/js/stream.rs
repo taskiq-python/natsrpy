@@ -942,6 +942,8 @@ impl From<async_nats::jetstream::stream::PurgeResponse> for PurgeResponse {
 #[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct Stream {
+    #[pyo3(get)]
+    name: String,
     stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
 }
 impl Stream {
@@ -949,7 +951,9 @@ impl Stream {
     pub fn new(
         stream: async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
     ) -> Self {
+        let info = stream.cached_info();
         Self {
+            name: info.config.name.clone(),
             stream: Arc::new(RwLock::new(stream)),
         }
     }
@@ -1104,6 +1108,11 @@ impl Stream {
             ctx.read().await.delete_message(sequence).await?;
             Ok(())
         })
+    }
+
+    #[must_use]
+    pub fn __repr__(&self) -> String {
+        format!("Stream<name={name:?}>", name = self.name)
     }
 }
 
