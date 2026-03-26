@@ -284,6 +284,20 @@ impl TryFrom<async_nats::jetstream::message::StreamMessage> for CounterEntry {
     }
 }
 
+#[pyo3::pymethods]
+impl CounterEntry {
+    pub fn __repr__(&self) -> String {
+        format!(
+            "CounterEntry<subject={:?}, value={}, increment={}>",
+            self.subject,
+            self.value,
+            self.increment
+                .as_ref()
+                .map_or_else(|| String::from("None"), ToString::to_string)
+        )
+    }
+}
+
 #[pyo3::pyclass]
 #[allow(dead_code)]
 pub struct Counters {
