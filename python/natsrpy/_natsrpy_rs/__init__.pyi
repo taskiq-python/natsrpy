@@ -1,3 +1,4 @@
+from asyncio import Future
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import Any, final, overload
@@ -42,8 +43,8 @@ class IteratorSubscription:
     """
 
     def __aiter__(self) -> IteratorSubscription: ...
-    async def __anext__(self) -> Message: ...
-    async def next(self, timeout: float | timedelta | None = None) -> Message:
+    def __anext__(self) -> Future[Message]: ...
+    def next(self, timeout: float | timedelta | None = None) -> Future[Message]:
         """Receive the next message from the subscription.
 
         :param timeout: maximum time to wait for a message in seconds
@@ -53,14 +54,14 @@ class IteratorSubscription:
             unsubscribed.
         """
 
-    async def unsubscribe(self, limit: int | None = None) -> None:
+    def unsubscribe(self, limit: int | None = None) -> Future[None]:
         """Unsubscribe from the subject.
 
         :param limit: if set, automatically unsubscribe after receiving
             this many additional messages, defaults to None.
         """
 
-    async def drain(self) -> None:
+    def drain(self) -> Future[None]:
         """Drain the subscription.
 
         Unsubscribes and flushes any remaining messages before closing.
@@ -74,14 +75,14 @@ class CallbackSubscription:
     Messages are automatically delivered to the callback in a background task.
     """
 
-    async def unsubscribe(self, limit: int | None = None) -> None:
+    def unsubscribe(self, limit: int | None = None) -> Future[None]:
         """Unsubscribe from the subject.
 
         :param limit: if set, automatically unsubscribe after receiving
             this many additional messages, defaults to None.
         """
 
-    async def drain(self) -> None:
+    def drain(self) -> Future[None]:
         """Drain the subscription.
 
         Unsubscribes and flushes any remaining messages before closing.
@@ -132,7 +133,7 @@ class Nats:
             in seconds or as a timedelta, defaults to 10 seconds.
         """
 
-    async def startup(self) -> None:
+    def startup(self) -> Future[None]:
         """Connect to the NATS server.
 
         Establishes the connection using the parameters provided at
@@ -140,14 +141,14 @@ class Nats:
         or JetStream operations.
         """
 
-    async def shutdown(self) -> None:
+    def shutdown(self) -> Future[None]:
         """Close the NATS connection.
 
         Drains all subscriptions and flushes pending data before
         disconnecting.
         """
 
-    async def publish(
+    def publish(
         self,
         subject: str,
         payload: bytes | str | bytearray | memoryview,
@@ -155,7 +156,7 @@ class Nats:
         headers: dict[str, Any] | None = None,
         reply: str | None = None,
         err_on_disconnect: bool = False,
-    ) -> None:
+    ) -> Future[None]:
         """Publish a message to a subject.
 
         :param subject: subject to publish the message to.
@@ -167,7 +168,7 @@ class Nats:
             is disconnected, defaults to False.
         """
 
-    async def request(
+    def request(
         self,
         subject: str,
         payload: bytes | str | bytearray | memoryview,
@@ -175,7 +176,7 @@ class Nats:
         headers: dict[str, Any] | None = None,
         inbox: str | None = None,
         timeout: float | timedelta | None = None,
-    ) -> Message:
+    ) -> Future[Message]:
         """Send a request and discard the response.
 
         :param subject: subject to send the request to.
@@ -188,31 +189,31 @@ class Nats:
         :return: response message.
         """
 
-    async def drain(self) -> None:
+    def drain(self) -> Future[None]:
         """Drain the connection.
 
         Gracefully closes all subscriptions and flushes pending messages.
         """
 
-    async def flush(self) -> None:
+    def flush(self) -> Future[None]:
         """Flush the connection.
 
         Waits until all pending messages have been sent to the server.
         """
 
     @overload
-    async def subscribe(
+    def subscribe(
         self,
         subject: str,
         callback: Callable[[Message], Awaitable[None]],
-    ) -> CallbackSubscription: ...
+    ) -> Future[CallbackSubscription]: ...
     @overload
-    async def subscribe(
+    def subscribe(
         self,
         subject: str,
         callback: None = None,
-    ) -> IteratorSubscription: ...
-    async def jetstream(
+    ) -> Future[IteratorSubscription]: ...
+    def jetstream(
         self,
         *,
         domain: str | None = None,
@@ -222,7 +223,7 @@ class Nats:
         concurrency_limit: int | None = None,
         max_ack_inflight: int | None = None,
         backpressure_on_inflight: bool | None = None,
-    ) -> js.JetStream:
+    ) -> Future[js.JetStream]:
         """Create a JetStream context.
 
         :param domain: JetStream domain to use.

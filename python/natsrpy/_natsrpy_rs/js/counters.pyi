@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import timedelta
 from typing import final
 
@@ -183,12 +184,12 @@ class Counters:
     ``allow_message_counter`` enabled.
     """
 
-    async def add(
+    def add(
         self,
         key: str,
         value: int,
         timeout: float | timedelta | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Add an arbitrary value to a counter.
 
         :param key: subject key identifying the counter.
@@ -198,11 +199,11 @@ class Counters:
         :return: the new counter value after the addition.
         """
 
-    async def incr(
+    def incr(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Increment a counter by one.
 
         Shorthand for ``add(key, 1)``.
@@ -213,11 +214,11 @@ class Counters:
         :return: the new counter value after the increment.
         """
 
-    async def decr(
+    def decr(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Decrement a counter by one.
 
         Shorthand for ``add(key, -1)``.
@@ -228,11 +229,11 @@ class Counters:
         :return: the new counter value after the decrement.
         """
 
-    async def get(
+    def get(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> CounterEntry:
+    ) -> Future[CounterEntry]:
         """Retrieve the current value of a counter.
 
         :param key: subject key identifying the counter.

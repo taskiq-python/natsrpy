@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import datetime, timedelta
 from typing import Any, final
 
@@ -471,11 +472,11 @@ class Stream:
     def consumers(self) -> ConsumersManager:
         """Manager for consumers bound to this stream."""
 
-    async def direct_get(
+    def direct_get(
         self,
         sequence: int,
         timeout: float | datetime | None = None,
-    ) -> StreamMessage:
+    ) -> Future[StreamMessage]:
         """Get a message directly from the stream by sequence number.
 
         :param sequence: sequence number of the message to get.
@@ -483,12 +484,12 @@ class Stream:
         :return: the stream message.
         """
 
-    async def direct_get_next_for_subject(
+    def direct_get_next_for_subject(
         self,
         subject: str,
         sequence: int | None = None,
         timeout: float | timedelta | None = None,
-    ) -> StreamMessage:
+    ) -> Future[StreamMessage]:
         """Get the next message for a subject directly from the stream.
 
         :param subject: subject to get the next message for.
@@ -498,11 +499,11 @@ class Stream:
         :return: the next stream message matching the subject filter.
         """
 
-    async def direct_get_first_for_subject(
+    def direct_get_first_for_subject(
         self,
         subject: str,
         timeout: float | timedelta | None = None,
-    ) -> StreamMessage:
+    ) -> Future[StreamMessage]:
         """Get the first message for a subject directly from the stream.
 
         :param subject: subject to get the first message for.
@@ -510,11 +511,11 @@ class Stream:
         :return: the first stream message matching the subject filter.
         """
 
-    async def direct_get_last_for_subject(
+    def direct_get_last_for_subject(
         self,
         subject: str,
         timeout: float | timedelta | None = None,
-    ) -> StreamMessage:
+    ) -> Future[StreamMessage]:
         """Get the last message for a subject directly from the stream.
 
         :param subject: subject to get the last message for.
@@ -522,20 +523,20 @@ class Stream:
         :return: the last stream message matching the subject filter.
         """
 
-    async def get_info(self, timeout: float | datetime | None = None) -> StreamInfo:
+    def get_info(self, timeout: float | datetime | None = None) -> Future[StreamInfo]:
         """Get information about the stream.
 
         :param timeout: operation timeout.
         :return: stream info.
         """
 
-    async def purge(
+    def purge(
         self,
         filter: str | None = None,
         sequence: int | None = None,
         keep: int | None = None,
         timeout: float | datetime | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Purge messages from the stream.
 
         :param filter: subject filter for messages to purge,
@@ -548,11 +549,11 @@ class Stream:
         :return: number of messages purged.
         """
 
-    async def delete_message(
+    def delete_message(
         self,
         sequence: int,
         timeout: float | datetime | None = None,
-    ) -> None:
+    ) -> Future[None]:
         """Delete a message from the stream by sequence number.
 
         :param sequence: sequence number of the message to delete.

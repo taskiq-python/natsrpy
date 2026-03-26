@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import timedelta
 from typing import final
 
@@ -280,11 +281,11 @@ class MessagesIterator:
     """Async iterator over JetStream consumer messages."""
 
     def __aiter__(self) -> Self: ...
-    async def __anext__(self) -> JetStreamMessage: ...
-    async def next(
+    def __anext__(self) -> Future[JetStreamMessage]: ...
+    def next(
         self,
         timeout: float | timedelta | None = None,
-    ) -> JetStreamMessage:
+    ) -> Future[JetStreamMessage]:
         """Receive the next message from the consumer.
 
         :param timeout: maximum time to wait in seconds or as a timedelta,
@@ -299,7 +300,7 @@ class PushConsumer:
     Messages are delivered by the server to a specified subject.
     """
 
-    async def messages(self) -> MessagesIterator:
+    def messages(self) -> Future[MessagesIterator]:
         """Get an async iterator for consuming messages.
 
         :return: an async iterator over JetStream messages.
@@ -312,7 +313,7 @@ class PullConsumer:
     Messages are fetched on demand in batches by the client.
     """
 
-    async def fetch(
+    def fetch(
         self,
         max_messages: int | None = None,
         group: str | None = None,
@@ -323,7 +324,7 @@ class PullConsumer:
         min_pending: int | None = None,
         min_ack_pending: int | None = None,
         timeout: float | timedelta | None = None,
-    ) -> list[JetStreamMessage]:
+    ) -> Future[list[JetStreamMessage]]:
         """Fetch a batch of messages from the consumer.
 
         :param max_messages: maximum number of messages to fetch.
