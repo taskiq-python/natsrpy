@@ -212,6 +212,7 @@ class Nats:
         subject: str,
         callback: None = None,
     ) -> IteratorSubscription: ...
+
     async def jetstream(
         self,
         *,
