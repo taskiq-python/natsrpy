@@ -7,12 +7,14 @@ from .consumers import (
     PushConsumer,
     PushConsumerConfig,
 )
+from .counters import Counters, CountersConfig
 from .kv import KeyValue, KVConfig
 from .object_store import ObjectStore, ObjectStoreConfig
 from .stream import Stream, StreamConfig
 
 __all__ = [
     "ConsumersManager",
+    "CountersManager",
     "KVManager",
     "ObjectStoreManager",
     "StreamsManager",
@@ -52,6 +54,45 @@ class StreamsManager:
 
     async def update(self, config: StreamConfig) -> Stream:
         """Update an existing stream configuration.
+
+        :param config: new stream configuration.
+        :return: the updated stream.
+        """
+
+@final
+class CountersManager:
+    """Manager for JetStream stream with counters support CRUD operations."""
+
+    async def create(self, config: CountersConfig) -> Counters:
+        """Create a new counters stream.
+
+        :param config: stream configuration.
+        :return: the created stream.
+        """
+
+    async def create_or_update(self, config: CountersConfig) -> Counters:
+        """Create a counters stream or update it if it already exists.
+
+        :param config: stream configuration.
+        :return: the created or updated stream.
+        """
+
+    async def get(self, name: str) -> Counters:
+        """Get an existing counters stream by name.
+
+        :param name: stream name.
+        :return: the stream.
+        """
+
+    async def delete(self, name: str) -> bool:
+        """Delete a counters stream.
+
+        :param name: stream name.
+        :return: True if the stream was deleted.
+        """
+
+    async def update(self, config: CountersConfig) -> Counters:
+        """Update an existing counters stream configuration.
 
         :param config: new stream configuration.
         :return: the updated stream.

@@ -6,7 +6,10 @@ use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    js::managers::{kv::KVManager, object_store::ObjectStoreManager, streams::StreamsManager},
+    js::managers::{
+        counters::CountersManager, kv::KVManager, object_store::ObjectStoreManager,
+        streams::StreamsManager,
+    },
     utils::{headers::NatsrpyHeadermapExt, natsrpy_future, py_types::SendableValue},
 };
 
@@ -64,6 +67,12 @@ impl JetStream {
     #[must_use]
     pub fn object_store(&self) -> ObjectStoreManager {
         ObjectStoreManager::new(self.ctx.clone())
+    }
+
+    #[getter]
+    #[must_use]
+    pub fn counters(&self) -> CountersManager {
+        CountersManager::new(self.ctx.clone())
     }
 
     #[pyo3(signature = (
