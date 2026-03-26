@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import datetime, timedelta
 from typing import final
 
@@ -88,8 +89,8 @@ class KVEntryIterator:
     """Async iterator over key-value entries."""
 
     def __aiter__(self) -> Self: ...
-    async def __anext__(self) -> KVEntry: ...
-    async def next(self, timeout: float | timedelta | None = None) -> KVEntry:
+    def __anext__(self) -> Future[KVEntry]: ...
+    def next(self, timeout: float | timedelta | None = None) -> Future[KVEntry]:
         """Receive the next key-value entry.
 
         :param timeout: maximum time to wait in seconds or as a timedelta,
@@ -102,8 +103,8 @@ class KeysIterator:
     """Async iterator over key-value bucket keys."""
 
     def __aiter__(self) -> Self: ...
-    async def __anext__(self) -> str: ...
-    async def next(self, timeout: float | timedelta | None = None) -> str:
+    def __anext__(self) -> Future[str]: ...
+    def next(self, timeout: float | timedelta | None = None) -> Future[str]:
         """Receive the next key.
 
         :param timeout: maximum time to wait in seconds or as a timedelta,
@@ -197,18 +198,18 @@ class KeyValue:
     def name(self) -> str:
         """Name of the key-value bucket."""
 
-    async def get(self, key: str) -> bytes | None:
+    def get(self, key: str) -> Future[bytes | None]:
         """Get the current value for a key.
 
         :param key: key to look up.
         :return: value bytes, or None if the key does not exist.
         """
 
-    async def delete(
+    def delete(
         self,
         key: str,
         expect_revision: int | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Delete a key from the bucket.
 
         :param key: key to delete.
@@ -217,7 +218,7 @@ class KeyValue:
         :return: the new revision number.
         """
 
-    async def update(self, key: str, value: bytes | str, revision: int) -> None:
+    def update(self, key: str, value: bytes | str, revision: int) -> Future[None]:
         """Update a key only if it matches the expected revision.
 
         :param key: key to update.
@@ -225,12 +226,12 @@ class KeyValue:
         :param revision: expected current revision.
         """
 
-    async def create(
+    def create(
         self,
         key: str,
         value: bytes | str,
         ttl: float | timedelta | None = None,
-    ) -> int:
+    ) -> Future[int]:
         """Create a new key.
 
         Fails if the key already exists.
@@ -241,7 +242,7 @@ class KeyValue:
         :return: the initial revision number.
         """
 
-    async def put(self, key: str, value: bytes | str) -> int:
+    def put(self, key: str, value: bytes | str) -> Future[int]:
         """Put a value for a key, creating or updating as needed.
 
         :param key: key to set.
@@ -249,12 +250,12 @@ class KeyValue:
         :return: the new revision number.
         """
 
-    async def purge(
+    def purge(
         self,
         key: str,
         ttl: float | timedelta | None = None,
         expect_revision: int | None = None,
-    ) -> None:
+    ) -> Future[None]:
         """Purge all revisions of a key.
 
         :param key: key to purge.
@@ -264,14 +265,14 @@ class KeyValue:
             concurrency control, defaults to None.
         """
 
-    async def history(self, key: str) -> KVEntryIterator:
+    def history(self, key: str) -> Future[KVEntryIterator]:
         """Get the revision history for a key.
 
         :param key: key to query.
         :return: an async iterator over historical entries.
         """
 
-    async def entry(self, key: str, revision: int | None = None) -> KVEntry | None:
+    def entry(self, key: str, revision: int | None = None) -> Future[KVEntry | None]:
         """Get a specific entry for a key.
 
         :param key: key to look up.
@@ -280,11 +281,11 @@ class KeyValue:
         :return: the entry, or None if not found.
         """
 
-    async def watch(
+    def watch(
         self,
         key: str,
         from_revision: int | None = None,
-    ) -> KVEntryIterator:
+    ) -> Future[KVEntryIterator]:
         """Watch a key for changes.
 
         :param key: key to watch.
@@ -293,14 +294,14 @@ class KeyValue:
         :return: an async iterator over entry changes.
         """
 
-    async def watch_with_history(self, key: str) -> KVEntryIterator:
+    def watch_with_history(self, key: str) -> Future[KVEntryIterator]:
         """Watch a key for changes, delivering all historical entries first.
 
         :param key: key to watch.
         :return: an async iterator starting with history then live changes.
         """
 
-    async def watch_all(self, from_revision: int | None = None) -> KVEntryIterator:
+    def watch_all(self, from_revision: int | None = None) -> Future[KVEntryIterator]:
         """Watch all keys in the bucket for changes.
 
         :param from_revision: start watching from this revision,
@@ -308,27 +309,27 @@ class KeyValue:
         :return: an async iterator over entry changes.
         """
 
-    async def watch_many(self, keys: list[str]) -> KVEntryIterator:
+    def watch_many(self, keys: list[str]) -> Future[KVEntryIterator]:
         """Watch multiple keys for changes.
 
         :param keys: list of keys to watch.
         :return: an async iterator over entry changes.
         """
 
-    async def watch_many_with_history(self, keys: list[str]) -> KVEntryIterator:
+    def watch_many_with_history(self, keys: list[str]) -> Future[KVEntryIterator]:
         """Watch multiple keys, delivering all historical entries first.
 
         :param keys: list of keys to watch.
         :return: an async iterator starting with history then live changes.
         """
 
-    async def keys(self) -> KeysIterator:
+    def keys(self) -> Future[KeysIterator]:
         """List all keys in the bucket.
 
         :return: an async iterator over key names.
         """
 
-    async def status(self) -> KVStatus:
+    def status(self) -> Future[KVStatus]:
         """Get the status of the key-value bucket.
 
         :return: bucket status information.

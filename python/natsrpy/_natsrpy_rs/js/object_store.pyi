@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import datetime, timedelta
 from typing import Any, final
 
@@ -100,8 +101,8 @@ class ObjectInfoIterator:
     """Async iterator over object info entries."""
 
     def __aiter__(self) -> Self: ...
-    async def __anext__(self) -> ObjectInfo: ...
-    async def next(self, timeout: float | timedelta | None = None) -> ObjectInfo:
+    def __anext__(self) -> Future[ObjectInfo]: ...
+    def next(self, timeout: float | timedelta | None = None) -> Future[ObjectInfo]:
         """Receive the next object info entry.
 
         :param timeout: maximum time to wait in seconds or as a timedelta,
@@ -117,12 +118,12 @@ class ObjectStore:
     objects that are chunked across NATS messages.
     """
 
-    async def get(
+    def get(
         self,
         name: str,
         writer: Writer[bytes],
         chunk_size: int | None = ...,  # 24MB
-    ) -> None:
+    ) -> Future[None]:
         """Download an object from the store.
 
         Writes the object content to the given writer in chunks.
@@ -133,7 +134,7 @@ class ObjectStore:
             defaults to 24 MB.
         """
 
-    async def put(
+    def put(
         self,
         name: str,
         value: bytes | str,
@@ -141,7 +142,7 @@ class ObjectStore:
         description: str | None = None,
         headers: dict[str, str | list[str]] | None = None,
         metadata: dict[str, str] | None = None,
-    ) -> None:
+    ) -> Future[None]:
         """Upload an object to the store.
 
         :param name: name for the stored object.
@@ -153,23 +154,23 @@ class ObjectStore:
         :param metadata: optional custom key-value metadata.
         """
 
-    async def delete(self, name: str) -> None:
+    def delete(self, name: str) -> Future[None]:
         """Delete an object from the store.
 
         :param name: name of the object to delete.
         """
 
-    async def seal(self) -> None:
+    def seal(self) -> Future[None]:
         """Seal the object store, making it read-only."""
 
-    async def get_info(self, name: str) -> ObjectInfo:
+    def get_info(self, name: str) -> Future[ObjectInfo]:
         """Get metadata for an object.
 
         :param name: name of the object.
         :return: object metadata.
         """
 
-    async def watch(self, with_history: bool = False) -> ObjectInfoIterator:
+    def watch(self, with_history: bool = False) -> Future[ObjectInfoIterator]:
         """Watch the object store for changes.
 
         :param with_history: when True, deliver all existing entries
@@ -177,13 +178,13 @@ class ObjectStore:
         :return: an async iterator over object info changes.
         """
 
-    async def list(self) -> ObjectInfoIterator:
+    def list(self) -> Future[ObjectInfoIterator]:
         """List all objects in the store.
 
         :return: an async iterator over object info entries.
         """
 
-    async def link_bucket(self, src_bucket: str, dest: str) -> ObjectInfo:
+    def link_bucket(self, src_bucket: str, dest: str) -> Future[ObjectInfo]:
         """Create a link to another object store bucket.
 
         :param src_bucket: name of the source bucket to link.
@@ -191,7 +192,7 @@ class ObjectStore:
         :return: object info for the created link.
         """
 
-    async def link_object(self, src: str, dest: str) -> ObjectInfo:
+    def link_object(self, src: str, dest: str) -> Future[ObjectInfo]:
         """Create a link to another object in the store.
 
         :param src: name of the source object to link.
@@ -199,14 +200,14 @@ class ObjectStore:
         :return: object info for the created link.
         """
 
-    async def update_metadata(
+    def update_metadata(
         self,
         name: str,
         new_name: str | None = None,
         description: str | None = None,
         headers: dict[str, Any] | None = None,
         metadata: dict[str, str] | None = None,
-    ) -> ObjectInfo:
+    ) -> Future[ObjectInfo]:
         """Update the metadata of an existing object.
 
         :param name: current name of the object.

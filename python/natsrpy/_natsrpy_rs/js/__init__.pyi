@@ -1,3 +1,4 @@
+from asyncio import Future
 from datetime import datetime, timedelta
 from typing import Any, Literal, final, overload
 
@@ -48,7 +49,7 @@ class JetStream:
     """
 
     @overload
-    async def publish(
+    def publish(
         self,
         subject: str,
         payload: str | bytes | bytearray | memoryview,
@@ -56,9 +57,9 @@ class JetStream:
         headers: dict[str, str] | None = None,
         err_on_disconnect: bool = False,
         wait: Literal[True],
-    ) -> Publication: ...
+    ) -> Future[Publication]: ...
     @overload
-    async def publish(
+    def publish(
         self,
         subject: str,
         payload: str | bytes | bytearray | memoryview,
@@ -66,9 +67,9 @@ class JetStream:
         headers: dict[str, str] | None = None,
         err_on_disconnect: bool = False,
         wait: Literal[False] = False,
-    ) -> None: ...
+    ) -> Future[None]: ...
     @overload
-    async def publish(
+    def publish(
         self,
         subject: str,
         payload: str | bytes | bytearray | memoryview,
@@ -76,7 +77,7 @@ class JetStream:
         headers: dict[str, str] | None = None,
         err_on_disconnect: bool = False,
         wait: bool = False,
-    ) -> Publication | None: ...
+    ) -> Future[Publication | None]: ...
     @property
     def kv(self) -> KVManager:
         """Manager for key-value store buckets."""
@@ -158,17 +159,17 @@ class JetStreamMessage:
     def token(self) -> str | None:
         """Authentication token, if applicable."""
 
-    async def ack(self, double: bool = False) -> None:
+    def ack(self, double: bool = False) -> Future[None]:
         """Acknowledge that a message was handled.
 
         :param double: whether to wait for server response, defaults to False.
         """
 
-    async def nack(
+    def nack(
         self,
         delay: float | timedelta | None = None,
         double: bool = False,
-    ) -> None:
+    ) -> Future[None]:
         """Negative acknowledgement.
 
         Signals that the message will not be processed now
@@ -179,7 +180,7 @@ class JetStreamMessage:
         :param double: whether to wait for server response, defaults to False.
         """
 
-    async def progress(self, double: bool = False) -> None:
+    def progress(self, double: bool = False) -> Future[None]:
         """Progress acknowledgement.
 
         Signals that the message is being handled right now.
@@ -189,7 +190,7 @@ class JetStreamMessage:
         :param double: whether to wait for server response, defaults to False.
         """
 
-    async def next(self, double: bool = False) -> None:
+    def next(self, double: bool = False) -> Future[None]:
         """Next acknowledgement.
 
         Only applies to pull consumers.
@@ -199,7 +200,7 @@ class JetStreamMessage:
         :param double: whether to wait for server response, defaults to False.
         """
 
-    async def term(self, double: bool = False) -> None:
+    def term(self, double: bool = False) -> Future[None]:
         """Term acknowledgement.
 
         Instructs server to stop redelivering message.
