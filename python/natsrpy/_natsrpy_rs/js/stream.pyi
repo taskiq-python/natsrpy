@@ -469,6 +469,10 @@ class Stream:
     """
 
     @property
+    def name(self) -> str:
+        """Stream name."""
+
+    @property
     def consumers(self) -> ConsumersManager:
         """Manager for consumers bound to this stream."""
 

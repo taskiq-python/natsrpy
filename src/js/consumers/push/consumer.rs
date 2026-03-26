@@ -16,13 +16,20 @@ type NatsPushConsumer =
 #[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone)]
 pub struct PushConsumer {
+    #[pyo3(get)]
+    name: String,
+    #[pyo3(get)]
+    stream_name: String,
     consumer: Arc<RwLock<NatsPushConsumer>>,
 }
 
 impl PushConsumer {
     #[must_use]
     pub fn new(consumer: NatsPushConsumer) -> Self {
+        let info = consumer.cached_info();
         Self {
+            name: info.name.clone(),
+            stream_name: info.stream_name.clone(),
             consumer: Arc::new(RwLock::new(consumer)),
         }
     }
@@ -50,6 +57,15 @@ impl PushConsumer {
                 consumer_guard.read().await.messages().await?,
             ))
         })
+    }
+
+    #[must_use]
+    pub fn __repr__(&self) -> String {
+        format!(
+            "PushConsumer<name={name:?}, stream_name={stream_name:?}>",
+            name = self.name,
+            stream_name = self.stream_name
+        )
     }
 }
 

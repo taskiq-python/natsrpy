@@ -300,6 +300,14 @@ class PushConsumer:
     Messages are delivered by the server to a specified subject.
     """
 
+    @property
+    def name(self) -> str:
+        """Get consumer name."""
+
+    @property
+    def stream_name(self) -> str:
+        """Get stream name that this consumer attached to."""
+
     def messages(self) -> Future[MessagesIterator]:
         """Get an async iterator for consuming messages.
 
@@ -312,6 +320,14 @@ class PullConsumer:
 
     Messages are fetched on demand in batches by the client.
     """
+
+    @property
+    def name(self) -> str:
+        """Get consumer name."""
+
+    @property
+    def stream_name(self) -> str:
+        """Get stream name that this consumer attached to."""
 
     def fetch(
         self,
