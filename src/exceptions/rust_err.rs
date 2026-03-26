@@ -11,6 +11,8 @@ pub enum NatsrpyError {
     #[error(transparent)]
     StdParseIntError(#[from] std::num::ParseIntError),
     #[error(transparent)]
+    JSONParseError(#[from] serde_json::Error),
+    #[error(transparent)]
     UnknownError(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
     #[error("NATS session error: {0}")]
     SessionError(String),

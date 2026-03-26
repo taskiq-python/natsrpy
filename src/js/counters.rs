@@ -14,6 +14,8 @@ use crate::{
 };
 
 const COUNTER_INCREMENT_HEADER: &str = "Nats-Incr";
+const COUNTER_SOURCES_HEADER: &str = "Nats-Counter-Sources";
+type CounterSources = HashMap<String, HashMap<String, i128>>;
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
 #[derive(Debug, Clone, Default)]
@@ -250,6 +252,38 @@ impl TryFrom<CountersConfig> for async_nats::jetstream::stream::Config {
     }
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct CounterPayload<'a> {
+    val: &'a str,
+}
+
+#[pyo3::pyclass(from_py_object, get_all)]
+#[derive(Clone)]
+pub struct CounterEntry {
+    pub subject: String,
+    pub value: i128,
+    pub sources: CounterSources,
+    pub increment: Option<i128>,
+}
+
+impl TryFrom<async_nats::jetstream::message::StreamMessage> for CounterEntry {
+    type Error = NatsrpyError;
+
+    fn try_from(value: async_nats::jetstream::message::StreamMessage) -> Result<Self, Self::Error> {
+        let counter_value = serde_json::from_slice::<CounterPayload>(&value.payload)?
+            .val
+            .parse::<i128>()?;
+        let sources = parse_sources(&value.headers)?;
+        let increment = parse_increment(&value.headers)?;
+        Ok(Self {
+            subject: value.subject.to_string(),
+            value: counter_value,
+            sources,
+            increment,
+        })
+    }
+}
+
 #[pyo3::pyclass]
 #[allow(dead_code)]
 pub struct Counters {
@@ -267,6 +301,31 @@ impl Counters {
             js,
         }
     }
+}
+
+fn parse_sources(headers: &HeaderMap) -> NatsrpyResult<CounterSources> {
+    let Some(sources) = headers.get(COUNTER_SOURCES_HEADER) else {
+        return Ok(CounterSources::new());
+    };
+    let raw_sources =
+        serde_json::from_str::<HashMap<String, HashMap<String, String>>>(sources.as_str())?;
+    let mut sources = CounterSources::new();
+    for (source_id, subjects) in raw_sources {
+        let mut subject_values = HashMap::new();
+        for (subject, value_str) in subjects {
+            subject_values.insert(subject, value_str.parse()?);
+        }
+        sources.insert(source_id, subject_values);
+    }
+
+    Ok(sources)
+}
+
+pub fn parse_increment(headers: &HeaderMap) -> NatsrpyResult<Option<i128>> {
+    let Some(header_value) = headers.get(COUNTER_INCREMENT_HEADER) else {
+        return Ok(None);
+    };
+    Ok(Some(header_value.as_str().parse()?))
 }
 
 #[pyo3::pymethods]
@@ -321,10 +380,28 @@ impl Counters {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         self.add(py, key, -1, timeout)
     }
+
+    #[pyo3(signature=(key, timeout=None))]
+    pub fn get<'py>(
+        &self,
+        py: Python<'py>,
+        key: String,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let stream_guard = self.stream.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let message = stream_guard
+                .read()
+                .await
+                .direct_get_last_for_subject(key)
+                .await?;
+            CounterEntry::try_from(message)
+        })
+    }
 }
 
 #[pyo3::pymodule(submodule, name = "counters")]
 pub mod pymod {
     #[pymodule_export]
-    use super::{Counters, CountersConfig};
+    use super::{CounterEntry, Counters, CountersConfig};
 }

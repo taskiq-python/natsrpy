@@ -16,7 +16,7 @@ from .stream import (
     SubjectTransform,
 )
 
-__all__ = ["Counters", "CountersConfig"]
+__all__ = ["CounterEntry", "Counters", "CountersConfig"]
 
 @final
 class CountersConfig:
@@ -154,6 +154,13 @@ class CountersConfig:
     ) -> Self: ...
 
 @final
+class CounterEntry:
+    subject: str
+    value: int
+    sources: dict[str, dict[str, int]]
+    increment: int | None
+
+@final
 class Counters:
     async def add(
         self,
@@ -171,3 +178,8 @@ class Counters:
         key: str,
         timeout: float | timedelta | None = None,
     ) -> int: ...
+    async def get(
+        self,
+        key: str,
+        timeout: float | timedelta | None = None,
+    ) -> CounterEntry: ...
