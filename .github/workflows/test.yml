@@ -1,7 +1,6 @@
 name: "Testing package"
 
 on:
-  push:
   pull_request:
 
 jobs:
