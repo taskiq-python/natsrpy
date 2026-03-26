@@ -1,4 +1,5 @@
 pub mod consumers;
+pub mod counters;
 pub mod kv;
 pub mod object_store;
 pub mod streams;
@@ -7,6 +8,8 @@ pub mod streams;
 pub mod pymod {
     #[pymodule_export]
     use super::consumers::ConsumersManager;
+    #[pymodule_export]
+    use super::counters::CountersManager;
     #[pymodule_export]
     use super::kv::KVManager;
     #[pymodule_export]

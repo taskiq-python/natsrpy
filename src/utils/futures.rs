@@ -14,6 +14,7 @@ where
     Ok(res)
 }
 
+#[inline]
 pub fn natsrpy_future_with_timeout<F, T, D>(
     py: Python,
     timeout: Option<D>,

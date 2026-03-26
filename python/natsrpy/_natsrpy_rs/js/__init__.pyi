@@ -1,14 +1,15 @@
 from datetime import datetime, timedelta
 from typing import Any, Literal, final, overload
 
-from . import consumers, kv, managers, object_store, stream
-from .managers import KVManager, ObjectStoreManager, StreamsManager
+from . import consumers, counters, kv, managers, object_store, stream
+from .managers import CountersManager, KVManager, ObjectStoreManager, StreamsManager
 
 __all__ = [
     "JetStream",
     "JetStreamMessage",
     "Publication",
     "consumers",
+    "counters",
     "kv",
     "managers",
     "object_store",
@@ -24,14 +25,19 @@ class Publication:
         sequence: sequence number assigned to the message in the stream.
         domain: JetStream domain of the stream.
         duplicate: whether the server detected this as a duplicate message.
-        value: optional metadata value returned by the server.
+        value: counter value. Only used if counters are enabled.
     """
 
-    stream: str
-    sequence: int
-    domain: str
-    duplicate: bool
-    value: str | None
+    @property
+    def stream(self) -> str: ...
+    @property
+    def sequence(self) -> int: ...
+    @property
+    def domain(self) -> str: ...
+    @property
+    def duplicate(self) -> bool: ...
+    @property
+    def value(self) -> str | None: ...
 
 @final
 class JetStream:
@@ -82,6 +88,10 @@ class JetStream:
     @property
     def object_store(self) -> ObjectStoreManager:
         """Manager for object store buckets."""
+
+    @property
+    def counters(self) -> CountersManager:
+        """Manager for streams with CRDT counter support."""
 
 @final
 class JetStreamMessage:

@@ -10,6 +10,7 @@ from ._natsrpy_rs.js.consumers import (
     PushConsumerConfig,
     ReplayPolicy,
 )
+from ._natsrpy_rs.js.counters import CounterEntry, Counters, CountersConfig
 from ._natsrpy_rs.js.kv import (
     KeysIterator,
     KeyValue,
@@ -53,6 +54,9 @@ __all__ = [
     "ClusterInfo",
     "Compression",
     "ConsumerLimits",
+    "CounterEntry",
+    "Counters",
+    "CountersConfig",
     "DeliverPolicy",
     "DiscardPolicy",
     "External",

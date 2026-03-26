@@ -9,6 +9,10 @@ pub enum NatsrpyError {
     #[error(transparent)]
     StdIOError(#[from] std::io::Error),
     #[error(transparent)]
+    StdParseIntError(#[from] std::num::ParseIntError),
+    #[error(transparent)]
+    JSONParseError(#[from] serde_json::Error),
+    #[error(transparent)]
     UnknownError(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
     #[error("NATS session error: {0}")]
     SessionError(String),
@@ -78,6 +82,8 @@ pub enum NatsrpyError {
     StreamInfoError(#[from] async_nats::jetstream::stream::InfoError),
     #[error(transparent)]
     StreamPurgeError(#[from] async_nats::jetstream::stream::PurgeError),
+    #[error(transparent)]
+    StreamLastRawMessageError(#[from] async_nats::jetstream::stream::LastRawMessageError),
     #[error(transparent)]
     PullMessageError(#[from] async_nats::jetstream::consumer::pull::MessagesError),
     #[error(transparent)]

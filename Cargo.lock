@@ -535,6 +535,8 @@ dependencies = [
  "pyo3",
  "pyo3-async-runtimes",
  "pyo3-log",
+ "serde",
+ "serde_json",
  "thiserror 2.0.18",
  "time",
  "tokio",
