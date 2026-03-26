@@ -7,7 +7,7 @@ pub mod streams;
 #[pyo3::pymodule(submodule, name = "managers")]
 pub mod pymod {
     #[pymodule_export]
-    use super::consumers::ConsumersManager;
+    use super::consumers::{ConsumersIterator, ConsumersManager, ConsumersNamesIterator};
     #[pymodule_export]
     use super::counters::CountersManager;
     #[pymodule_export]

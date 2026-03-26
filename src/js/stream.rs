@@ -979,6 +979,67 @@ impl Stream {
         })
     }
 
+    #[pyo3(signature=(subject, sequence=None, timeout=None))]
+    pub fn direct_get_next_for_subject<'py>(
+        &self,
+        py: Python<'py>,
+        subject: String,
+        sequence: Option<u64>,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let message = ctx
+                .read()
+                .await
+                .direct_get_next_for_subject(subject, sequence)
+                .await?;
+            let result =
+                Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
+            Ok(result)
+        })
+    }
+
+    #[pyo3(signature=(subject, timeout=None))]
+    pub fn direct_get_first_for_subject<'py>(
+        &self,
+        py: Python<'py>,
+        subject: String,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let message = ctx
+                .read()
+                .await
+                .direct_get_first_for_subject(subject)
+                .await?;
+            let result =
+                Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
+            Ok(result)
+        })
+    }
+
+    #[pyo3(signature=(subject, timeout=None))]
+    pub fn direct_get_last_for_subject<'py>(
+        &self,
+        py: Python<'py>,
+        subject: String,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            let message = ctx
+                .read()
+                .await
+                .direct_get_last_for_subject(subject)
+                .await?;
+            let result =
+                Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
+            Ok(result)
+        })
+    }
+
     #[pyo3(signature=(timeout=None))]
     pub fn get_info<'py>(
         &self,
@@ -1028,6 +1089,20 @@ impl Stream {
                 )));
             }
             Ok(resp.purged)
+        })
+    }
+
+    #[pyo3(signature=(sequence, timeout=None))]
+    pub fn delete_message<'py>(
+        &self,
+        py: Python<'py>,
+        sequence: u64,
+        timeout: Option<TimeValue>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.stream.clone();
+        natsrpy_future_with_timeout(py, timeout, async move {
+            ctx.read().await.delete_message(sequence).await?;
+            Ok(())
         })
     }
 }

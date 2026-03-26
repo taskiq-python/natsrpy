@@ -1,6 +1,8 @@
 from datetime import timedelta
 from typing import final, overload
 
+from typing_extensions import Self
+
 from .consumers import (
     PullConsumer,
     PullConsumerConfig,
@@ -13,12 +15,62 @@ from .object_store import ObjectStore, ObjectStoreConfig
 from .stream import Stream, StreamConfig
 
 __all__ = [
+    "ConsumersIterator",
     "ConsumersManager",
+    "ConsumersNamesIterator",
     "CountersManager",
     "KVManager",
     "ObjectStoreManager",
     "StreamsManager",
 ]
+
+@final
+class ConsumersIterator:
+    """Async iterator over consumers subscribed to a stream.
+
+    Returned by :meth:`ConsumersManager.list`.
+    Consumers can be received using ``async for`` or by calling :meth:`next`
+    directly.
+
+    Consumer type is identified by its config. If it has deliver_subject set,
+    then PushConsumer is returned.
+    """
+
+    def __aiter__(self) -> Self: ...
+    async def __anext__(self) -> PullConsumer | PushConsumer: ...
+    async def next(
+        self,
+        timeout: float | timedelta | None = None,
+    ) -> PullConsumer | PushConsumer:
+        """Receive the next consumer from the stream.
+
+        :param timeout: maximum time to wait for a message in seconds
+            or as a timedelta, defaults to None (wait indefinitely).
+        :return: the next consumer.
+        :raises StopAsyncIteration: when the subscription is drained or
+            unsubscribed.
+        """
+
+@final
+class ConsumersNamesIterator:
+    """Async iterator over names of consumers subscribed to a stream.
+
+    Returned by :meth:`ConsumersManager.list_names`.
+    Consumer names can be received using ``async for`` or by calling :meth:`next`
+    directly.
+    """
+
+    def __aiter__(self) -> Self: ...
+    async def __anext__(self) -> str: ...
+    async def next(self, timeout: float | timedelta | None = None) -> str:
+        """Receive the next consumer name from the stream.
+
+        :param timeout: maximum time to wait for a message in seconds
+            or as a timedelta, defaults to None (wait indefinitely).
+        :return: the next consumer name.
+        :raises StopAsyncIteration: when the subscription is drained or
+            unsubscribed.
+        """
 
 @final
 class StreamsManager:
@@ -183,6 +235,27 @@ class ConsumersManager:
 
         :param name: consumer name.
         :return: True if the consumer was resumed.
+        """
+
+    async def list(self) -> ConsumersIterator:
+        """List consumers subscribed to the stream.
+
+        This method iterates over all consumers on a
+        stream and retunrns correct types, by looking
+        at their config.
+
+        If you only need names, use :meth:`ConsumersManager.list_names` instead.
+
+        :return: an async iterator over consumers.
+        """
+
+    async def list_names(self) -> ConsumersNamesIterator:
+        """List names of consumers subscribed to the stream.
+
+        This method iterates over all consumer names on a
+        stream.
+
+        :return: an async iterator over consumer names.
         """
 
 @final

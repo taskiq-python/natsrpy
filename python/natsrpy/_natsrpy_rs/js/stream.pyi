@@ -467,6 +467,10 @@ class Stream:
     accessing messages in the stream, as well as managing consumers.
     """
 
+    @property
+    def consumers(self) -> ConsumersManager:
+        """Manager for consumers bound to this stream."""
+
     async def direct_get(
         self,
         sequence: int,
@@ -477,6 +481,45 @@ class Stream:
         :param sequence: sequence number of the message to get.
         :param timeout: operation timeout.
         :return: the stream message.
+        """
+
+    async def direct_get_next_for_subject(
+        self,
+        subject: str,
+        sequence: int | None = None,
+        timeout: float | timedelta | None = None,
+    ) -> StreamMessage:
+        """Get the next message for a subject directly from the stream.
+
+        :param subject: subject to get the next message for.
+        :param sequence: optional sequence number to start searching from.
+            If not provided, starts from the beginning of the stream.
+        :param timeout: operation timeout.
+        :return: the next stream message matching the subject filter.
+        """
+
+    async def direct_get_first_for_subject(
+        self,
+        subject: str,
+        timeout: float | timedelta | None = None,
+    ) -> StreamMessage:
+        """Get the first message for a subject directly from the stream.
+
+        :param subject: subject to get the first message for.
+        :param timeout: operation timeout.
+        :return: the first stream message matching the subject filter.
+        """
+
+    async def direct_get_last_for_subject(
+        self,
+        subject: str,
+        timeout: float | timedelta | None = None,
+    ) -> StreamMessage:
+        """Get the last message for a subject directly from the stream.
+
+        :param subject: subject to get the last message for.
+        :param timeout: operation timeout.
+        :return: the last stream message matching the subject filter.
         """
 
     async def get_info(self, timeout: float | datetime | None = None) -> StreamInfo:
@@ -505,6 +548,13 @@ class Stream:
         :return: number of messages purged.
         """
 
-    @property
-    def consumers(self) -> ConsumersManager:
-        """Manager for consumers bound to this stream."""
+    async def delete_message(
+        self,
+        sequence: int,
+        timeout: float | datetime | None = None,
+    ) -> None:
+        """Delete a message from the stream by sequence number.
+
+        :param sequence: sequence number of the message to delete.
+        :param timeout: operation timeout.
+        """
