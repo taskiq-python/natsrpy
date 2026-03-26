@@ -1,7 +1,7 @@
 import uuid
 
 import pytest
-from natsrpy.js import CounterEntry, Counters, CountersConfig, JetStream, StreamConfig
+from natsrpy.js import CounterEntry, Counters, CountersConfig, JetStream
 
 
 async def test_counters_create(js: JetStream) -> None:
@@ -51,11 +51,9 @@ async def test_counters_update(js: JetStream) -> None:
     config = CountersConfig(name=name, subjects=[f"{name}.>"])
     await js.counters.create(config)
     try:
-        update_cfg = StreamConfig(
+        update_cfg = CountersConfig(
             name=name,
             subjects=[f"{name}.>"],
-            allow_direct=True,
-            allow_message_counter=True,
             description="updated description",
         )
         counters = await js.counters.update(update_cfg)

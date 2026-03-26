@@ -7,7 +7,7 @@ use crate::{
 use pyo3::{Bound, PyAny, Python};
 use tokio::sync::RwLock;
 
-use crate::{exceptions::rust_err::NatsrpyResult, js::stream::StreamConfig, utils::natsrpy_future};
+use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
 
 #[pyo3::pyclass]
 pub struct CountersManager {
@@ -87,7 +87,7 @@ impl CountersManager {
     pub fn update<'py>(
         &self,
         py: Python<'py>,
-        config: StreamConfig,
+        config: CountersConfig,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.ctx.clone();
         natsrpy_future(py, async move {

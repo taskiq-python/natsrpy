@@ -91,7 +91,7 @@ class CountersManager:
         :return: True if the stream was deleted.
         """
 
-    async def update(self, config: StreamConfig) -> Counters:
+    async def update(self, config: CountersConfig) -> Counters:
         """Update an existing counters stream configuration.
 
         :param config: new stream configuration.
