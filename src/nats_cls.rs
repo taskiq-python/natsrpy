@@ -176,8 +176,7 @@ impl NatsCls {
                     inbox,
                     timeout: timeout.map(Into::into).map(Some),
                 };
-                session.send_request(subject, request).await?;
-                Ok(())
+                crate::message::Message::try_from(session.send_request(subject, request).await?)
             } else {
                 Err(NatsrpyError::NotInitialized)
             }
