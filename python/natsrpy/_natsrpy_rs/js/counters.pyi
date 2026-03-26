@@ -155,6 +155,20 @@ class CountersConfig:
 
 @final
 class CounterEntry:
+    """A single counter entry retrieved from a counters stream.
+
+    Holds the current aggregated value for a counter subject along
+    with metadata about cross-stream sources and the last increment.
+
+    Attributes:
+        subject: the subject this counter entry belongs to.
+        value: the current aggregated counter value.
+        sources: mapping of source stream names to their per-subject
+            counter contributions.
+        increment: the value of the last increment applied, or ``None``
+            when the entry was retrieved via ``Counters.get``.
+    """
+
     subject: str
     value: int
     sources: dict[str, dict[str, int]]
@@ -162,24 +176,68 @@ class CounterEntry:
 
 @final
 class Counters:
+    """Handle for a JetStream counters stream.
+
+    Provides atomic increment, decrement, and retrieval operations
+    on CRDT counters backed by a JetStream stream with
+    ``allow_message_counter`` enabled.
+    """
+
     async def add(
         self,
         key: str,
         value: int,
         timeout: float | timedelta | None = None,
-    ) -> int: ...
+    ) -> int:
+        """Add an arbitrary value to a counter.
+
+        :param key: subject key identifying the counter.
+        :param value: integer amount to add (may be negative).
+        :param timeout: optional operation timeout in seconds or as
+            a timedelta.
+        :return: the new counter value after the addition.
+        """
+
     async def incr(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> int: ...
+    ) -> int:
+        """Increment a counter by one.
+
+        Shorthand for ``add(key, 1)``.
+
+        :param key: subject key identifying the counter.
+        :param timeout: optional operation timeout in seconds or as
+            a timedelta.
+        :return: the new counter value after the increment.
+        """
+
     async def decr(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> int: ...
+    ) -> int:
+        """Decrement a counter by one.
+
+        Shorthand for ``add(key, -1)``.
+
+        :param key: subject key identifying the counter.
+        :param timeout: optional operation timeout in seconds or as
+            a timedelta.
+        :return: the new counter value after the decrement.
+        """
+
     async def get(
         self,
         key: str,
         timeout: float | timedelta | None = None,
-    ) -> CounterEntry: ...
+    ) -> CounterEntry:
+        """Retrieve the current value of a counter.
+
+        :param key: subject key identifying the counter.
+        :param timeout: optional operation timeout in seconds or as
+            a timedelta.
+        :return: counter entry with the current value and metadata.
+        :raises Exception: if no counter entry exists for the key.
+        """
