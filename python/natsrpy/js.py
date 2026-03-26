@@ -20,6 +20,7 @@ from ._natsrpy_rs.js.kv import (
     KVOperation,
     KVStatus,
 )
+from ._natsrpy_rs.js.managers import ConsumersIterator, ConsumersNamesIterator
 from ._natsrpy_rs.js.object_store import (
     ObjectInfo,
     ObjectInfoIterator,
@@ -54,6 +55,8 @@ __all__ = [
     "ClusterInfo",
     "Compression",
     "ConsumerLimits",
+    "ConsumersIterator",
+    "ConsumersNamesIterator",
     "CounterEntry",
     "Counters",
     "CountersConfig",
