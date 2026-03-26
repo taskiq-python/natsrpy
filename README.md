@@ -5,8 +5,9 @@
 
 This is a client library for [NATS](https://nats.io) written in rust.
 
-Credits for [Intree](https://intree.com) for supporting this project.
+## Sponsors of this project
 
+Special thanks to [Intree](https://intree.com) for supporting development of this project.
 
 ## installation
 
@@ -16,7 +17,16 @@ This package can be installed from pypi:
 pip install natsrpy
 ```
 
-Or alternatively you ca build it yourself using maturin, and stable rust.
+Or alternatively you can build it yourself using maturin, and stable rust.
+
+## Usage
+
+You can see usage examples in our [examples](https://github.com/taskiq-python/natsrpy/tree/master/examples) folder.
+
+Also, our [tests](https://github.com/taskiq-python/natsrpy/tree/master/python/tests)
+are written in python and could be a good place to discover features and the way they intended to be used.
+
+As of for now, our documentation is only availabe in source code. You can see it in our [type-stubs folder](https://github.com/taskiq-python/natsrpy/tree/master/python/natsrpy/_natsrpy_rs).
 
 ## Development
 
