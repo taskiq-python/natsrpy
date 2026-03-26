@@ -175,7 +175,7 @@ class Nats:
         headers: dict[str, Any] | None = None,
         inbox: str | None = None,
         timeout: float | timedelta | None = None,
-    ) -> None:
+    ) -> Message:
         """Send a request and discard the response.
 
         :param subject: subject to send the request to.
@@ -185,6 +185,7 @@ class Nats:
             if None.
         :param timeout: maximum time to wait for a response in seconds
             or as a timedelta, defaults to the client request_timeout.
+        :return: response message.
         """
 
     async def drain(self) -> None:
