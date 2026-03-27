@@ -111,13 +111,14 @@ jobs:
           export CARGO_INCREMENTAL="1"
           cargo llvm-cov clean --workspace
           uv run -- maturin dev --uv
-          uv run -- pytest -vv -n auto python/tests --cov natsrpy --cov-report xml
+          uv run -- pytest -vv python/tests --cov natsrpy --cov-report xml
           cargo llvm-cov report --lcov --output-path coverage.lcov
+          cat coverage.lcov
       - uses: codecov/codecov-action@v6
         with:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.lcov,./coverage.xml
+          files: coverage.lcov
           verbose: true
       - name: Teardown docker
         if: always()
