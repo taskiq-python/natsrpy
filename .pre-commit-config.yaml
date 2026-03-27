@@ -76,6 +76,7 @@ repos:
         language: python
         additional_dependencies:
           - mypy
+          - maturin
         entry: python ./scripts/stubtest.py
         pass_filenames:  false
         always_run: true
