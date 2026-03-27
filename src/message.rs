@@ -52,7 +52,21 @@ impl TryFrom<async_nats::Message> for Message {
     type Error = NatsrpyError;
 
     fn try_from(value: async_nats::Message) -> Result<Self, Self::Error> {
-        Self::try_from(&value)
+        Python::attach(move |gil| {
+            let headers = match &value.headers {
+                Some(headermap) => headermap.to_pydict(gil)?.unbind(),
+                None => PyDict::new(gil).unbind(),
+            };
+            Ok(Self {
+                subject: value.subject.into_string(),
+                reply: value.reply.map(async_nats::Subject::into_string),
+                payload: PyBytes::new(gil, &value.payload).unbind(),
+                headers,
+                status: value.status.map(Into::<u16>::into),
+                description: value.description,
+                length: value.length,
+            })
+        })
     }
 }
 

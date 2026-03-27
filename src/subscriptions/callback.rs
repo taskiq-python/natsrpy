@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use futures_util::StreamExt;
 use pyo3::{Bound, Py, PyAny, Python};
 
@@ -15,7 +17,7 @@ pub struct CallbackSubscription {
     reading_task: tokio::task::AbortHandle,
 }
 
-async fn process_message(message: async_nats::message::Message, py_callback: Py<PyAny>) {
+async fn process_message(message: async_nats::message::Message, py_callback: Arc<Py<PyAny>>) {
     let task = async || -> NatsrpyResult<()> {
         log::debug!("Received message: {:?}. Processing ...", &message);
         let awaitable = Python::attach(|gil| -> NatsrpyResult<_> {
@@ -35,7 +37,7 @@ async fn process_message(message: async_nats::message::Message, py_callback: Py<
 
 async fn start_py_sub(
     mut sub: async_nats::Subscriber,
-    py_callback: Py<PyAny>,
+    py_callback: Arc<Py<PyAny>>,
     locals: pyo3_async_runtimes::TaskLocals,
     mut unsub_receiver: tokio::sync::mpsc::Receiver<UnsubscribeCommand>,
 ) {
@@ -44,7 +46,7 @@ async fn start_py_sub(
             msg = sub.next() => {
                 match msg {
                     Some(message) => {
-                        let py_cb = Python::attach(|py| py_callback.clone_ref(py));
+                        let py_cb = py_callback.clone();
                         tokio::spawn(pyo3_async_runtimes::tokio::scope(
                             locals.clone(),
                             process_message(message, py_cb),
@@ -78,6 +80,7 @@ impl CallbackSubscription {
     pub fn new(sub: async_nats::Subscriber, callback: Py<PyAny>) -> NatsrpyResult<Self> {
         let (unsub_tx, unsub_rx) = tokio::sync::mpsc::channel(1);
         let task_locals = Python::attach(pyo3_async_runtimes::tokio::get_current_locals)?;
+        let callback = Arc::new(callback);
         let task_handle = tokio::task::spawn(pyo3_async_runtimes::tokio::scope(
             task_locals.clone(),
             start_py_sub(sub, callback, task_locals, unsub_rx),

@@ -1,10 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, Python};
 
 use crate::{
-    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    exceptions::rust_err::NatsrpyResult,
     utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
 };
 
@@ -18,7 +18,7 @@ pub struct PullConsumer {
     name: String,
     #[pyo3(get)]
     stream_name: String,
-    consumer: Arc<RwLock<NatsPullConsumer>>,
+    consumer: Arc<NatsPullConsumer>,
 }
 
 impl PullConsumer {
@@ -28,16 +28,8 @@ impl PullConsumer {
         Self {
             name: info.name.clone(),
             stream_name: info.stream_name.clone(),
-            consumer: Arc::new(RwLock::new(consumer)),
+            consumer: Arc::new(consumer),
         }
-    }
-
-    pub fn get_consumer(&self) -> NatsrpyResult<NatsPullConsumer> {
-        Ok(self
-            .consumer
-            .read()
-            .map_err(|_| NatsrpyError::SessionError("Lock poisoned".to_string()))?
-            .clone())
     }
 }
 
@@ -67,9 +59,7 @@ impl PullConsumer {
         min_ack_pending: Option<usize>,
         timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        // Because we borrow cosnumer lock
-        // later for modifications of fetchbuilder.
-        let consumer = self.get_consumer()?;
+        let consumer = self.consumer.clone();
         #[allow(clippy::significant_drop_tightening)]
         natsrpy_future_with_timeout(py, timeout, async move {
             let mut fetch_builder = consumer.fetch();

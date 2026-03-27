@@ -14,7 +14,7 @@ use crate::{
     },
 };
 use pyo3::{Bound, PyAny, Python};
-use tokio::sync::RwLock;
+
 
 #[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -944,7 +944,7 @@ impl From<async_nats::jetstream::stream::PurgeResponse> for PurgeResponse {
 pub struct Stream {
     #[pyo3(get)]
     name: String,
-    stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
+    stream: Arc<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>,
 }
 impl Stream {
     #[must_use]
@@ -954,7 +954,7 @@ impl Stream {
         let info = stream.cached_info();
         Self {
             name: info.config.name.clone(),
-            stream: Arc::new(RwLock::new(stream)),
+            stream: Arc::new(stream),
         }
     }
 }
@@ -976,7 +976,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let message = ctx.read().await.direct_get(sequence).await?;
+            let message = ctx.direct_get(sequence).await?;
             let result =
                 Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
             Ok(result)
@@ -994,8 +994,6 @@ impl Stream {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
             let message = ctx
-                .read()
-                .await
                 .direct_get_next_for_subject(subject, sequence)
                 .await?;
             let result =
@@ -1014,8 +1012,6 @@ impl Stream {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
             let message = ctx
-                .read()
-                .await
                 .direct_get_first_for_subject(subject)
                 .await?;
             let result =
@@ -1034,8 +1030,6 @@ impl Stream {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
             let message = ctx
-                .read()
-                .await
                 .direct_get_last_for_subject(subject)
                 .await?;
             let result =
@@ -1052,7 +1046,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            StreamInfo::try_from(ctx.read().await.get_info().await?)
+            StreamInfo::try_from(ctx.get_info().await?)
         })
     }
 
@@ -1072,7 +1066,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let mut purge_request = ctx.read().await.purge();
+            let mut purge_request = ctx.purge();
             if let Some(filter) = filter {
                 purge_request = purge_request.filter(filter);
             }
@@ -1105,7 +1099,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            ctx.read().await.delete_message(sequence).await?;
+            ctx.delete_message(sequence).await?;
             Ok(())
         })
     }

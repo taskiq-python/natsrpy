@@ -13,7 +13,7 @@ use pyo3::{
     Bound, Py, PyAny, PyRef, Python,
     types::{PyBytes, PyDateTime},
 };
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -229,20 +229,19 @@ pub struct KeyValue {
     put_prefix: Option<String>,
     #[pyo3(get)]
     use_jetstream_prefix: bool,
-    store: Arc<RwLock<async_nats::jetstream::kv::Store>>,
+    store: Arc<async_nats::jetstream::kv::Store>,
 }
 
 impl KeyValue {
     #[must_use]
     pub fn new(store: async_nats::jetstream::kv::Store) -> Self {
-        // store.
         Self {
             name: store.name.clone(),
             stream_name: store.stream_name.clone(),
             prefix: store.prefix.clone(),
             put_prefix: store.put_prefix.clone(),
             use_jetstream_prefix: store.use_jetstream_prefix,
-            store: Arc::new(RwLock::new(store)),
+            store: Arc::new(store),
         }
     }
 }
@@ -253,8 +252,6 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(store
-                .read()
-                .await
                 .get(key)
                 .await?
                 .map(|data| Python::attach(move |gil| PyBytes::new(gil, &data).unbind())))
@@ -274,12 +271,10 @@ impl KeyValue {
         natsrpy_future(py, async move {
             if let Some(ttl) = ttl {
                 Ok(store
-                    .read()
-                    .await
                     .create_with_ttl(key, data, ttl.into())
                     .await?)
             } else {
-                Ok(store.read().await.create(key, data).await?)
+                Ok(store.create(key, data).await?)
             }
         })
     }
@@ -300,14 +295,10 @@ impl KeyValue {
         natsrpy_future(py, async move {
             match (ttl, expect_revision) {
                 (None, _) => Ok(store
-                    .read()
-                    .await
                     .purge_expect_revision(key, expect_revision)
                     .await?),
-                (Some(ttl), None) => Ok(store.read().await.purge_with_ttl(key, ttl.into()).await?),
+                (Some(ttl), None) => Ok(store.purge_with_ttl(key, ttl.into()).await?),
                 (Some(ttl), Some(revision)) => Ok(store
-                    .read()
-                    .await
                     .purge_expect_revision_with_ttl(key, revision, ttl.into())
                     .await?),
             }
@@ -324,7 +315,7 @@ impl KeyValue {
         let data = value.into();
         natsrpy_future(
             py,
-            async move { Ok(store.read().await.put(key, data).await?) },
+            async move { Ok(store.put(key, data).await?) },
         )
     }
 
@@ -341,8 +332,6 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(store
-                .read()
-                .await
                 .delete_expect_revision(key, expect_revision)
                 .await?)
         })
@@ -358,8 +347,6 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(store
-                .read()
-                .await
                 .update(key, value.into(), revision)
                 .await?)
         })
@@ -369,7 +356,7 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(KVEntryIterator::new(Streamer::new(
-                store.read().await.history(key).await?,
+                store.history(key).await?,
             )))
         })
     }
@@ -383,9 +370,9 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             let watch = if let Some(rev) = from_revision {
-                store.read().await.watch_all_from_revision(rev).await?
+                store.watch_all_from_revision(rev).await?
             } else {
-                store.read().await.watch_all().await?
+                store.watch_all().await?
             };
             Ok(KVEntryIterator::new(Streamer::new(watch)))
         })
@@ -401,9 +388,9 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             let watch = if let Some(rev) = from_revision {
-                store.read().await.watch_from_revision(key, rev).await?
+                store.watch_from_revision(key, rev).await?
             } else {
-                store.read().await.watch(key).await?
+                store.watch(key).await?
             };
             Ok(KVEntryIterator::new(Streamer::new(watch)))
         })
@@ -417,7 +404,7 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(KVEntryIterator::new(Streamer::new(
-                store.read().await.watch_with_history(key).await?,
+                store.watch_with_history(key).await?,
             )))
         })
     }
@@ -430,7 +417,7 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(KVEntryIterator::new(Streamer::new(
-                store.read().await.watch_many(keys).await?,
+                store.watch_many(keys).await?,
             )))
         })
     }
@@ -443,7 +430,7 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(KVEntryIterator::new(Streamer::new(
-                store.read().await.watch_many_with_history(keys).await?,
+                store.watch_many_with_history(keys).await?,
             )))
         })
     }
@@ -462,16 +449,12 @@ impl KeyValue {
         natsrpy_future(py, async move {
             let entry = if let Some(rev) = revision {
                 store
-                    .read()
-                    .await
                     .entry_for_revision(key, rev)
                     .await?
                     .map(KVEntry::try_from)
                     .transpose()?
             } else {
                 store
-                    .read()
-                    .await
                     .entry(key)
                     .await?
                     .map(KVEntry::try_from)
@@ -484,7 +467,7 @@ impl KeyValue {
     pub fn status<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let store = self.store.clone();
         natsrpy_future(py, async move {
-            KVStatus::try_from(store.read().await.status().await?)
+            KVStatus::try_from(store.status().await?)
         })
     }
 
@@ -492,7 +475,7 @@ impl KeyValue {
         let store = self.store.clone();
         natsrpy_future(py, async move {
             Ok(KeysIterator::new(Streamer::new(
-                store.read().await.keys().await?,
+                store.keys().await?,
             )))
         })
     }

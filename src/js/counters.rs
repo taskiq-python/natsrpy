@@ -2,7 +2,6 @@ use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_nats::{HeaderMap, jetstream::context::traits::Publisher};
 use pyo3::{Bound, PyAny, Python};
-use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -301,7 +300,7 @@ impl CounterEntry {
 #[pyo3::pyclass]
 #[allow(dead_code)]
 pub struct Counters {
-    stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
+    stream: Arc<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>,
     js: Arc<async_nats::jetstream::Context>,
 }
 
@@ -312,7 +311,7 @@ impl Counters {
         js: Arc<async_nats::jetstream::Context>,
     ) -> Self {
         Self {
-            stream: Arc::new(RwLock::new(stream)),
+            stream: Arc::new(stream),
             js,
         }
     }
@@ -404,8 +403,6 @@ impl Counters {
         let stream_guard = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
             let message = stream_guard
-                .read()
-                .await
                 .direct_get_last_for_subject(key)
                 .await?;
             CounterEntry::try_from(message)

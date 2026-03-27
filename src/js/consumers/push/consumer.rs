@@ -1,4 +1,4 @@
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, PyRef, Python};
@@ -19,7 +19,7 @@ pub struct PushConsumer {
     name: String,
     #[pyo3(get)]
     stream_name: String,
-    consumer: Arc<RwLock<NatsPushConsumer>>,
+    consumer: Arc<NatsPushConsumer>,
 }
 
 impl PushConsumer {
@@ -29,16 +29,8 @@ impl PushConsumer {
         Self {
             name: info.name.clone(),
             stream_name: info.stream_name.clone(),
-            consumer: Arc::new(RwLock::new(consumer)),
+            consumer: Arc::new(consumer),
         }
-    }
-
-    pub fn get_consumer(&self) -> NatsrpyResult<NatsPushConsumer> {
-        Ok(self
-            .consumer
-            .read()
-            .map_err(|_| NatsrpyError::SessionError(String::from("Lock is poisoned")))?
-            .clone())
     }
 }
 
@@ -58,7 +50,7 @@ impl From<async_nats::jetstream::consumer::push::Messages> for MessagesIterator 
 #[pyo3::pymethods]
 impl PushConsumer {
     pub fn messages<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let consumer = self.get_consumer()?;
+        let consumer = self.consumer.clone();
         natsrpy_future(py, async move {
             Ok(MessagesIterator::from(consumer.messages().await?))
         })

@@ -3,7 +3,6 @@ use pyo3::{
     types::{PyBytes, PyDateTime, PyDict},
 };
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -48,7 +47,7 @@ impl From<async_nats::jetstream::message::Info<'_>> for JSInfo {
 pub struct JetStreamMessage {
     message: crate::message::Message,
     info: JSInfo,
-    acker: Arc<RwLock<async_nats::jetstream::message::Acker>>,
+    acker: Arc<async_nats::jetstream::message::Acker>,
 }
 
 impl TryFrom<async_nats::jetstream::Message> for JetStreamMessage {
@@ -60,7 +59,7 @@ impl TryFrom<async_nats::jetstream::Message> for JetStreamMessage {
         Ok(Self {
             message: message.try_into()?,
             info: js_info,
-            acker: Arc::new(RwLock::new(acker)),
+            acker: Arc::new(acker),
         })
     }
 }
@@ -72,12 +71,12 @@ impl JetStreamMessage {
         kind: async_nats::jetstream::message::AckKind,
         double: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let acker_guard = self.acker.clone();
+        let acker = self.acker.clone();
         natsrpy_future(py, async move {
             if double {
-                acker_guard.read().await.double_ack_with(kind).await?;
+                acker.double_ack_with(kind).await?;
             } else {
-                acker_guard.read().await.ack_with(kind).await?;
+                acker.ack_with(kind).await?;
             }
             Ok(())
         })
