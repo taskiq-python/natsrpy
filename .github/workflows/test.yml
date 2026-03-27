@@ -93,6 +93,10 @@ jobs:
           python-version: 3.x
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+      - name: Install llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
       - id: prepare-container
         name: Prepare docker container
         run: docker compose up -d --wait
@@ -103,8 +107,8 @@ jobs:
         run: |
           set -e
           source <(cargo llvm-cov show-env --sh)
-          export CARGO_TARGET_DIR=$CARGO_LLVM_COV_TARGET_DIR
-          export CARGO_INCREMENTAL=1
+          export CARGO_TARGET_DIR="$CARGO_LLVM_COV_TARGET_DIR"
+          export CARGO_INCREMENTAL="1"
           cargo llvm-cov clean --workspace
           uv run -- maturin dev --uv
           uv run -- pytest -vv -n auto python/tests --cov natsrpy --cov-report xml
