@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use async_nats::{Subject, connection::State, jetstream::context::traits::Publisher};
 use pyo3::{Bound, PyAny, Python, types::PyDict};
-use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -15,15 +14,13 @@ use crate::{
 
 #[pyo3::pyclass]
 pub struct JetStream {
-    ctx: Arc<RwLock<async_nats::jetstream::Context>>,
+    ctx: Arc<async_nats::jetstream::Context>,
 }
 
 impl JetStream {
     #[must_use]
     pub fn new(ctx: async_nats::jetstream::Context) -> Self {
-        Self {
-            ctx: Arc::new(RwLock::new(ctx)),
-        }
+        Self { ctx: Arc::new(ctx) }
     }
 }
 
@@ -92,20 +89,16 @@ impl JetStream {
         err_on_disconnect: bool,
         wait: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.ctx.clone();
         let data = payload.into();
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
             .transpose()?;
+        let client = self.ctx.clone();
         natsrpy_future(py, async move {
-            if err_on_disconnect
-                && ctx.read().await.client().connection_state() == State::Disconnected
-            {
+            if err_on_disconnect && client.client().connection_state() == State::Disconnected {
                 return Err(NatsrpyError::Disconnected);
             }
-            let publication = ctx
-                .read()
-                .await
+            let publication = client
                 .publish_message(async_nats::jetstream::message::OutboundMessage {
                     subject: Subject::from(subject),
                     payload: data,

@@ -28,7 +28,7 @@ pub struct NatsCls {
     request_timeout: Option<TimeValue>,
 }
 
-/// Helper to read the client from the RwLock. Returns a clone of the Client if present.
+/// Helper to read the client from the `RwLock`. Returns a clone of the Client if present.
 fn get_client(session: &RwLock<Option<async_nats::Client>>) -> NatsrpyResult<async_nats::Client> {
     session
         .read()
@@ -315,9 +315,8 @@ impl NatsCls {
 impl Drop for NatsCls {
     fn drop(&mut self) {
         let client = {
-            let mut guard = match self.nats_session.write() {
-                Ok(g) => g,
-                Err(_) => return,
+            let Ok(mut guard) = self.nats_session.write() else {
+                return;
             };
             guard.take()
         };

@@ -302,13 +302,14 @@ impl CounterEntry {
 #[allow(dead_code)]
 pub struct Counters {
     stream: Arc<RwLock<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>>,
-    js: Arc<RwLock<async_nats::jetstream::Context>>,
+    js: Arc<async_nats::jetstream::Context>,
 }
 
 impl Counters {
+    #[must_use]
     pub fn new(
         stream: async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
-        js: Arc<RwLock<async_nats::jetstream::Context>>,
+        js: Arc<async_nats::jetstream::Context>,
     ) -> Self {
         Self {
             stream: Arc::new(RwLock::new(stream)),
@@ -357,8 +358,6 @@ impl Counters {
         headers.insert(COUNTER_INCREMENT_HEADER, value.to_string());
         natsrpy_future_with_timeout(py, timeout, async move {
             let resp = js
-                .read()
-                .await
                 .publish_message(async_nats::jetstream::message::OutboundMessage {
                     subject: key.into(),
                     payload: bytes::Bytes::new(),

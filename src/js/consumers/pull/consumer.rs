@@ -1,11 +1,10 @@
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, Python};
-use tokio::sync::RwLock;
 
 use crate::{
-    exceptions::rust_err::NatsrpyResult,
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
 };
 
@@ -31,6 +30,14 @@ impl PullConsumer {
             stream_name: info.stream_name.clone(),
             consumer: Arc::new(RwLock::new(consumer)),
         }
+    }
+
+    pub fn get_consumer(&self) -> NatsrpyResult<NatsPullConsumer> {
+        Ok(self
+            .consumer
+            .read()
+            .map_err(|_| NatsrpyError::SessionError("Lock poisoned".to_string()))?
+            .clone())
     }
 }
 
@@ -60,13 +67,11 @@ impl PullConsumer {
         min_ack_pending: Option<usize>,
         timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let ctx = self.consumer.clone();
-
         // Because we borrow cosnumer lock
         // later for modifications of fetchbuilder.
+        let consumer = self.get_consumer()?;
         #[allow(clippy::significant_drop_tightening)]
         natsrpy_future_with_timeout(py, timeout, async move {
-            let consumer = ctx.read().await;
             let mut fetch_builder = consumer.fetch();
             if let Some(max_messages) = max_messages {
                 fetch_builder = fetch_builder.max_messages(max_messages);

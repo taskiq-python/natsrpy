@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, PyRef, Python};
@@ -40,10 +41,22 @@ impl IteratorSubscription {
             unreachable!("Subscription used after del")
         };
         natsrpy_future_with_timeout(py, timeout, async move {
-            let Some(message) = inner.lock().await.next().await else {
-                return Err(NatsrpyError::AsyncStopIteration);
-            };
-            crate::message::Message::try_from(message)
+            loop {
+                let message = {
+                    let mut sub_guard = inner.lock().await;
+                    // We wait up to 0.2 second for new messages.
+                    // If this thing doesn't resolve in this period,
+                    // we just release the lock. Otherwise it would be impossible to
+                    // unsubscribe.
+                    match tokio::time::timeout(Duration::from_millis(200), sub_guard.next()).await {
+                        Ok(Some(message)) => message,
+                        Ok(None) => return Err(NatsrpyError::AsyncStopIteration),
+                        // Timeout met. Try again.
+                        _ => continue,
+                    }
+                };
+                return crate::message::Message::try_from(message);
+            }
         })
     }
 

@@ -102,18 +102,14 @@ impl CallbackSubscription {
             unreachable!("Subscription used after del")
         };
         natsrpy_future(py, async move {
-            let cmd = match limit {
-                Some(n) => UnsubscribeCommand::UnsubscribeAfter(n),
-                None => UnsubscribeCommand::Unsubscribe,
-            };
-            sender
-                .send(cmd)
-                .await
-                .map_err(|_| {
-                    crate::exceptions::rust_err::NatsrpyError::SessionError(
-                        "Subscription already closed".to_string(),
-                    )
-                })?;
+            let cmd = limit.map_or(UnsubscribeCommand::Unsubscribe, |n| {
+                UnsubscribeCommand::UnsubscribeAfter(n)
+            });
+            sender.send(cmd).await.map_err(|_| {
+                crate::exceptions::rust_err::NatsrpyError::SessionError(
+                    "Subscription already closed".to_string(),
+                )
+            })?;
             Ok(())
         })
     }
@@ -123,14 +119,11 @@ impl CallbackSubscription {
             unreachable!("Subscription used after del")
         };
         natsrpy_future(py, async move {
-            sender
-                .send(UnsubscribeCommand::Drain)
-                .await
-                .map_err(|_| {
-                    crate::exceptions::rust_err::NatsrpyError::SessionError(
-                        "Subscription already closed".to_string(),
-                    )
-                })?;
+            sender.send(UnsubscribeCommand::Drain).await.map_err(|_| {
+                crate::exceptions::rust_err::NatsrpyError::SessionError(
+                    "Subscription already closed".to_string(),
+                )
+            })?;
             Ok(())
         })
     }
