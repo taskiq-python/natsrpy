@@ -1,5 +1,5 @@
-[![PyPI](https://img.shields.io/pypi/v/natsrpy?style=for-the-badge)](https://pypi.org/project/scyllapy/)
-[![PyPI - Downloads](https://img.shields.io/pypi/dm/natsrpy?style=for-the-badge)](https://pypistats.org/packages/scyllapy)
+[![PyPI](https://img.shields.io/pypi/v/natsrpy?style=for-the-badge)](https://pypi.org/project/natsrpy/)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/natsrpy?style=for-the-badge)](https://pypistats.org/packages/natsrpy)
 
 # Nats client
 
@@ -21,7 +21,32 @@ Or alternatively you can build it yourself using maturin, and stable rust.
 
 ## Usage
 
-You can see usage examples in our [examples](https://github.com/taskiq-python/natsrpy/tree/master/examples) folder.
+```python
+import asyncio
+
+from natsrpy import Nats
+
+async def main() -> None:
+    nats = Nats(["nats://localhost:4222"])
+    await nats.startup()
+
+    subscription = await nats.subscribe("hello")
+
+    await nats.publish("hello", "str world")
+
+    subscription.unsubscribe(limit=1)
+    async for message in subscription:
+        print(message)
+
+    # Don't forget to call shutdown.
+    await nats.shutdown()
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
+```
+
+You can see more usage examples in our [examples](https://github.com/taskiq-python/natsrpy/tree/master/examples) folder.
 
 Also, our [tests](https://github.com/taskiq-python/natsrpy/tree/master/python/tests)
 are written in python and could be a good place to discover features and the way they intended to be used.
