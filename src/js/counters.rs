@@ -402,9 +402,7 @@ impl Counters {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let stream_guard = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let message = stream_guard
-                .direct_get_last_for_subject(key)
-                .await?;
+            let message = stream_guard.direct_get_last_for_subject(key).await?;
             CounterEntry::try_from(message)
         })
     }

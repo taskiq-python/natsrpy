@@ -15,7 +15,6 @@ use crate::{
 };
 use pyo3::{Bound, PyAny, Python};
 
-
 #[pyo3::pyclass(from_py_object)]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum StorageType {
@@ -993,9 +992,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let message = ctx
-                .direct_get_next_for_subject(subject, sequence)
-                .await?;
+            let message = ctx.direct_get_next_for_subject(subject, sequence).await?;
             let result =
                 Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
             Ok(result)
@@ -1011,9 +1008,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let message = ctx
-                .direct_get_first_for_subject(subject)
-                .await?;
+            let message = ctx.direct_get_first_for_subject(subject).await?;
             let result =
                 Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
             Ok(result)
@@ -1029,9 +1024,7 @@ impl Stream {
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
         natsrpy_future_with_timeout(py, timeout, async move {
-            let message = ctx
-                .direct_get_last_for_subject(subject)
-                .await?;
+            let message = ctx.direct_get_last_for_subject(subject).await?;
             let result =
                 Python::attach(move |gil| StreamMessage::from_nats_message(gil, &message))?;
             Ok(result)

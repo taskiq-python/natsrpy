@@ -75,9 +75,7 @@ impl ConsumersNamesIterator {
 impl ConsumersIterator {
     #[must_use]
     pub fn new(
-        stream: Arc<
-            async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
-        >,
+        stream: Arc<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>,
         streamer: Streamer<
             Result<
                 async_nats::jetstream::consumer::Info,
@@ -148,9 +146,7 @@ pub struct ConsumersManager {
 impl ConsumersManager {
     #[must_use]
     pub const fn new(
-        stream: Arc<
-            async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>,
-        >,
+        stream: Arc<async_nats::jetstream::stream::Stream<async_nats::jetstream::stream::Info>>,
     ) -> Self {
         Self { stream }
     }
@@ -195,15 +191,13 @@ impl ConsumersManager {
         natsrpy_future(py, async move {
             match config {
                 ConsumerConfigs::Pull(config) => {
-                    let consumer = PullConsumer::new(
-                        ctx.create_consumer(config.try_into()?).await?,
-                    );
+                    let consumer =
+                        PullConsumer::new(ctx.create_consumer(config.try_into()?).await?);
                     Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
                 }
                 ConsumerConfigs::Push(config) => {
-                    let consumer = PushConsumer::new(
-                        ctx.create_consumer(config.try_into()?).await?,
-                    );
+                    let consumer =
+                        PushConsumer::new(ctx.create_consumer(config.try_into()?).await?);
                     Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
                 }
             }
@@ -219,15 +213,13 @@ impl ConsumersManager {
         natsrpy_future(py, async move {
             match config {
                 ConsumerConfigs::Pull(config) => {
-                    let consumer = PullConsumer::new(
-                        ctx.update_consumer(config.try_into()?).await?,
-                    );
+                    let consumer =
+                        PullConsumer::new(ctx.update_consumer(config.try_into()?).await?);
                     Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
                 }
                 ConsumerConfigs::Push(config) => {
-                    let consumer = PushConsumer::new(
-                        ctx.update_consumer(config.try_into()?).await?,
-                    );
+                    let consumer =
+                        PushConsumer::new(ctx.update_consumer(config.try_into()?).await?);
                     Ok(Python::attach(|gil| consumer.into_py_any(gil))?)
                 }
             }
@@ -267,16 +259,18 @@ impl ConsumersManager {
 
     pub fn resume<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
-            Ok(ctx.resume_consumer(&name).await?.paused)
-        })
+        natsrpy_future(
+            py,
+            async move { Ok(ctx.resume_consumer(&name).await?.paused) },
+        )
     }
 
     pub fn delete<'py>(&self, py: Python<'py>, name: String) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.stream.clone();
-        natsrpy_future(py, async move {
-            Ok(ctx.delete_consumer(&name).await?.success)
-        })
+        natsrpy_future(
+            py,
+            async move { Ok(ctx.delete_consumer(&name).await?.success) },
+        )
     }
 
     pub fn list<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
