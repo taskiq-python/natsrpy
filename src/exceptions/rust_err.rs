@@ -8,6 +8,8 @@ pub type NatsrpyResult<T> = Result<T, NatsrpyError>;
 pub enum NatsrpyError {
     #[error(transparent)]
     StdIOError(#[from] std::io::Error),
+    #[error("The lock is poisoned")]
+    PoisonedLock,
     #[error(transparent)]
     StdParseIntError(#[from] std::num::ParseIntError),
     #[error(transparent)]

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, PyRef, Python};
-use tokio::sync::RwLock;
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
@@ -20,7 +19,7 @@ pub struct PushConsumer {
     name: String,
     #[pyo3(get)]
     stream_name: String,
-    consumer: Arc<RwLock<NatsPushConsumer>>,
+    consumer: Arc<NatsPushConsumer>,
 }
 
 impl PushConsumer {
@@ -30,20 +29,20 @@ impl PushConsumer {
         Self {
             name: info.name.clone(),
             stream_name: info.stream_name.clone(),
-            consumer: Arc::new(RwLock::new(consumer)),
+            consumer: Arc::new(consumer),
         }
     }
 }
 
 #[pyo3::pyclass]
 pub struct MessagesIterator {
-    messages: Option<Arc<RwLock<async_nats::jetstream::consumer::push::Messages>>>,
+    messages: Option<Arc<tokio::sync::Mutex<async_nats::jetstream::consumer::push::Messages>>>,
 }
 
 impl From<async_nats::jetstream::consumer::push::Messages> for MessagesIterator {
     fn from(value: async_nats::jetstream::consumer::push::Messages) -> Self {
         Self {
-            messages: Some(Arc::new(RwLock::new(value))),
+            messages: Some(Arc::new(tokio::sync::Mutex::new(value))),
         }
     }
 }
@@ -51,11 +50,9 @@ impl From<async_nats::jetstream::consumer::push::Messages> for MessagesIterator 
 #[pyo3::pymethods]
 impl PushConsumer {
     pub fn messages<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let consumer_guard = self.consumer.clone();
+        let consumer = self.consumer.clone();
         natsrpy_future(py, async move {
-            Ok(MessagesIterator::from(
-                consumer_guard.read().await.messages().await?,
-            ))
+            Ok(MessagesIterator::from(consumer.messages().await?))
         })
     }
 
@@ -87,7 +84,7 @@ impl MessagesIterator {
         };
         #[allow(clippy::significant_drop_tightening)]
         natsrpy_future_with_timeout(py, timeout, async move {
-            let mut messages = messages_guard.write().await;
+            let mut messages = messages_guard.lock().await;
             let Some(message) = messages.next().await else {
                 return Err(NatsrpyError::AsyncStopIteration);
             };
