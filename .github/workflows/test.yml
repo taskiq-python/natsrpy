@@ -113,12 +113,11 @@ jobs:
           uv run -- maturin dev --uv
           uv run -- pytest -vv python/tests --cov natsrpy --cov-report xml
           cargo llvm-cov report --lcov --output-path coverage.lcov
-          cat coverage.lcov
       - uses: codecov/codecov-action@v6
         with:
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: coverage.lcov
+          files: coverage.lcov,coverage.xml
           verbose: true
       - name: Teardown docker
         if: always()
