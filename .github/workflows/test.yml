@@ -2,6 +2,9 @@ name: "Testing package"
 
 on:
   pull_request:
+  push:
+    branches:
+      - master
 
 jobs:
   py-lint:
@@ -83,29 +86,39 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: clippy
+          components: llvm-tools-preview
           override: true
       - uses: actions/setup-python@v6
         with:
           python-version: 3.x
       - name: Install uv
         uses: astral-sh/setup-uv@v7
+      - name: Install llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov
       - id: prepare-container
         name: Prepare docker container
         run: docker compose up -d --wait
       - id: setup-venv
         name: Setup virtualenv
-        run: python -m venv .venv
-      - name: Build lib
-        uses: PyO3/maturin-action@v1
-        with:
-          command: dev --uv
-          sccache: true
+        run: uv venv
       - name: Run pytest
         run: |
           set -e
-          source .venv/bin/activate
-          pytest -vv -n auto python/tests
+          source <(cargo llvm-cov show-env --sh)
+          export CARGO_TARGET_DIR="$CARGO_LLVM_COV_TARGET_DIR"
+          export CARGO_INCREMENTAL="1"
+          cargo llvm-cov clean --workspace
+          uv run -- maturin dev --uv
+          uv run -- pytest -vv python/tests --cov natsrpy --cov-report xml
+          cargo llvm-cov report --lcov --output-path coverage.lcov
+      - uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.lcov,coverage.xml
+          verbose: true
       - name: Teardown docker
         if: always()
         run: docker compose down

@@ -13,10 +13,11 @@ classifiers = [
   "Programming Language :: Rust",
   "Topic :: System :: Networking",
 ]
-dynamic = ["version"]
 dependencies = [
-    "typing-extensions>=4.14.0",
+  "maturin-import-hook>=0.3.0",
+  "typing-extensions>=4.14.0",
 ]
+dynamic = ["version"]
 
 [[project.authors]]
 name = "Pavel Kirilin"
@@ -25,15 +26,20 @@ email = "s3riussan@gmail.com"
 [dependency-groups]
 dev = [
   "anyio>=4,<5",
+  "maturin>=1,<2",
   "mypy>=1.19.1,<2",
   "pre-commit>=4.5.1,<5",
   "pytest>=9,<10",
+  "pytest-cov>=7,<8",
   "pytest-xdist>=3,<4",
 ]
 
 [build-system]
 requires = ["maturin>=1.12,<2.0"]
 build-backend = "maturin"
+
+[tool.uv]
+package = false
 
 [tool.maturin]
 bindings = "pyo3"

@@ -56,15 +56,27 @@ As of for now, our documentation is only availabe in source code. You can see it
 ## Development
 
 We use stable rust and pyo3 for writing python extension module.
+In order to build the project, use uv and maturin.
 
-In order to run the project use maturin:
+uv is used for all python-side dependencies (including dev deps).
+Maturin is used only for building rust-side.
 
 ```bash
 # To create .venv folder
 uv venv
+# Sync deps
+uv sync --locked
 # To build and install the package in a virtual environment
-maturin dev --uv
+uv run -- maturin dev --uv
 ```
+
+If you want to setup automatic rebuilds, use this command:
+
+```bash
+uv run -- python -m maturin_import_hook site install
+```
+
+It will force rebuild project when rust code changes.
 
 For lints please use `pre-commit`.
 
