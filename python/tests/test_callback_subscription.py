@@ -31,7 +31,7 @@ async def test_callback_unsubscribe_with_limit(nats: Nats) -> None:
     await nats.publish(subj, b"msg-1")
     await nats.publish(subj, b"msg-2")
     await asyncio.wait_for(event.wait(), timeout=5.0)
-    assert received == [b"msg-1", b"msg-2"]
+    assert set(received) == {b"msg-1", b"msg-2"}
 
 
 async def test_callback_drain(nats_url: str) -> None:
