@@ -86,7 +86,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          components: clippy,llvm-tools-preview
+          components: llvm-tools-preview
           override: true
       - uses: actions/setup-python@v6
         with:
