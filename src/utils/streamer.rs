@@ -24,7 +24,7 @@ impl<T: Send + 'static> Streamer<T> {
     pub fn new(
         stream: impl futures_util::Stream<Item = T> + std::marker::Unpin + Send + 'static,
     ) -> Self {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        let (tx, rx) = tokio::sync::mpsc::channel(128);
         let task = tokio::task::spawn(task_pooler(stream, tx));
         Self {
             messages: Arc::new(Mutex::new(rx)),
