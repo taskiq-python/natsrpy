@@ -17,25 +17,34 @@ pub struct Message {
     pub length: usize,
 }
 
+impl Message {
+    /// Convert from an `async_nats::Message` using an already-held GIL token.
+    /// This avoids a redundant `Python::attach` call when the caller already has the GIL.
+    pub fn from_nats_message(
+        gil: Python<'_>,
+        value: &async_nats::Message,
+    ) -> Result<Self, NatsrpyError> {
+        let headers = match &value.headers {
+            Some(headermap) => headermap.to_pydict(gil)?.unbind(),
+            None => PyDict::new(gil).unbind(),
+        };
+        Ok(Self {
+            subject: value.subject.to_string(),
+            reply: value.reply.as_deref().map(ToString::to_string),
+            payload: PyBytes::new(gil, &value.payload).unbind(),
+            headers,
+            status: value.status.map(Into::<u16>::into),
+            description: value.description.clone(),
+            length: value.length,
+        })
+    }
+}
+
 impl TryFrom<&async_nats::Message> for Message {
     type Error = NatsrpyError;
 
     fn try_from(value: &async_nats::Message) -> Result<Self, Self::Error> {
-        Python::attach(move |gil| {
-            let headers = match &value.headers {
-                Some(headermap) => headermap.to_pydict(gil)?.unbind(),
-                None => PyDict::new(gil).unbind(),
-            };
-            Ok(Self {
-                subject: value.subject.to_string(),
-                reply: value.reply.as_deref().map(ToString::to_string),
-                payload: PyBytes::new(gil, &value.payload).unbind(),
-                headers,
-                status: value.status.map(Into::<u16>::into),
-                description: value.description.clone(),
-                length: value.length,
-            })
-        })
+        Python::attach(move |gil| Self::from_nats_message(gil, value))
     }
 }
 

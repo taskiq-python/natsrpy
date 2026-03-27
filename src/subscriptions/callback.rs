@@ -1,22 +1,25 @@
-use std::{sync::Arc, time::Duration};
-
 use futures_util::StreamExt;
 use pyo3::{Bound, Py, PyAny, Python};
-use tokio::sync::Mutex;
 
 use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
 
+enum UnsubscribeCommand {
+    Unsubscribe,
+    UnsubscribeAfter(u64),
+    Drain,
+}
+
 #[pyo3::pyclass]
 pub struct CallbackSubscription {
-    inner: Option<Arc<Mutex<async_nats::Subscriber>>>,
+    unsub_sender: Option<tokio::sync::mpsc::Sender<UnsubscribeCommand>>,
     reading_task: tokio::task::AbortHandle,
 }
 
 async fn process_message(message: async_nats::message::Message, py_callback: Py<PyAny>) {
     let task = async || -> NatsrpyResult<()> {
         log::debug!("Received message: {:?}. Processing ...", &message);
-        let message = crate::message::Message::try_from(&message)?;
         let awaitable = Python::attach(|gil| -> NatsrpyResult<_> {
+            let message = crate::message::Message::from_nats_message(gil, &message)?;
             let res = py_callback.call1(gil, (message,))?;
             let rust_task = pyo3_async_runtimes::tokio::into_future(res.into_bound(gil))?;
             Ok(rust_task)
@@ -31,50 +34,57 @@ async fn process_message(message: async_nats::message::Message, py_callback: Py<
 }
 
 async fn start_py_sub(
-    sub: Arc<Mutex<async_nats::Subscriber>>,
+    mut sub: async_nats::Subscriber,
     py_callback: Py<PyAny>,
     locals: pyo3_async_runtimes::TaskLocals,
+    mut unsub_receiver: tokio::sync::mpsc::Receiver<UnsubscribeCommand>,
 ) {
     loop {
-        let message = {
-            let mut sub_guard = sub.lock().await;
-            // We wait up to 0.2 second for new messages.
-            // If this thing doesn't resolve in this period,
-            // we just release the lock. Otherwise it would be impossible to
-            // unsubscribe.
-            match tokio::time::timeout(Duration::from_millis(200), sub_guard.next()).await {
-                Ok(Some(message)) => message,
-                Ok(None) => break,
-                _ => continue,
+        tokio::select! {
+            msg = sub.next() => {
+                match msg {
+                    Some(message) => {
+                        let py_cb = Python::attach(|py| py_callback.clone_ref(py));
+                        tokio::spawn(pyo3_async_runtimes::tokio::scope(
+                            locals.clone(),
+                            process_message(message, py_cb),
+                        ));
+                    }
+                    None => break,
+                }
             }
-        };
-        let py_cb = Python::attach(|py| py_callback.clone_ref(py));
-        tokio::spawn(pyo3_async_runtimes::tokio::scope(
-            locals.clone(),
-            process_message(message, py_cb),
-        ));
+            cmd = unsub_receiver.recv() => {
+                match cmd {
+                    Some(UnsubscribeCommand::Unsubscribe) => {
+                        sub.unsubscribe().await.ok();
+                        break;
+                    }
+                    Some(UnsubscribeCommand::UnsubscribeAfter(limit)) => {
+                        sub.unsubscribe_after(limit).await.ok();
+                        // Don't break — continue receiving up to `limit` messages.
+                    }
+                    Some(UnsubscribeCommand::Drain) => {
+                        sub.drain().await.ok();
+                        break;
+                    }
+                    None => break,
+                }
+            }
+        }
     }
-    // while let Some(message) = sub.lock().await.next().await {
-    //     let py_cb = Python::attach(|py| py_callback.clone_ref(py));
-    //     tokio::spawn(pyo3_async_runtimes::tokio::scope(
-    //         locals.clone(),
-    //         process_message(message, py_cb),
-    //     ));
-    // }
 }
 
 impl CallbackSubscription {
     pub fn new(sub: async_nats::Subscriber, callback: Py<PyAny>) -> NatsrpyResult<Self> {
-        let sub = Arc::new(Mutex::new(sub));
-        let cb_sub = sub.clone();
+        let (unsub_tx, unsub_rx) = tokio::sync::mpsc::channel(1);
         let task_locals = Python::attach(pyo3_async_runtimes::tokio::get_current_locals)?;
         let task_handle = tokio::task::spawn(pyo3_async_runtimes::tokio::scope(
             task_locals.clone(),
-            start_py_sub(cb_sub, callback, task_locals),
+            start_py_sub(sub, callback, task_locals, unsub_rx),
         ))
         .abort_handle();
         Ok(Self {
-            inner: Some(sub),
+            unsub_sender: Some(unsub_tx),
             reading_task: task_handle,
         })
     }
@@ -88,46 +98,50 @@ impl CallbackSubscription {
         py: Python<'py>,
         limit: Option<u64>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let Some(inner) = self.inner.clone() else {
+        let Some(sender) = self.unsub_sender.clone() else {
             unreachable!("Subscription used after del")
         };
         natsrpy_future(py, async move {
-            if let Some(limit) = limit {
-                inner.lock().await.unsubscribe_after(limit).await?;
-            } else {
-                inner.lock().await.unsubscribe().await?;
-            }
+            let cmd = match limit {
+                Some(n) => UnsubscribeCommand::UnsubscribeAfter(n),
+                None => UnsubscribeCommand::Unsubscribe,
+            };
+            sender
+                .send(cmd)
+                .await
+                .map_err(|_| {
+                    crate::exceptions::rust_err::NatsrpyError::SessionError(
+                        "Subscription already closed".to_string(),
+                    )
+                })?;
             Ok(())
         })
     }
 
     pub fn drain<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let Some(inner) = self.inner.clone() else {
+        let Some(sender) = self.unsub_sender.clone() else {
             unreachable!("Subscription used after del")
         };
         natsrpy_future(py, async move {
-            inner.lock().await.drain().await?;
+            sender
+                .send(UnsubscribeCommand::Drain)
+                .await
+                .map_err(|_| {
+                    crate::exceptions::rust_err::NatsrpyError::SessionError(
+                        "Subscription already closed".to_string(),
+                    )
+                })?;
             Ok(())
         })
     }
 }
 
-/// This is required only because
-/// in nats library they run async operation on Drop.
-///
-/// Because of that we need to execute drop in async
-/// runtime's context.
-///
-/// And because we want to perform a drop,
-/// we need somehow drop the inner variable,
-/// but leave self intouch. That is exactly why we have
-/// Option<Arc<...>>. So we can just assign it to None
-/// and it will perform a drop.
 impl Drop for CallbackSubscription {
     fn drop(&mut self) {
-        pyo3_async_runtimes::tokio::get_runtime().block_on(async move {
-            self.inner = None;
-            self.reading_task.abort();
-        });
+        // Drop the sender to signal the reading task to stop,
+        // then abort the task. Both operations are synchronous
+        // and don't require an async runtime context.
+        self.unsub_sender = None;
+        self.reading_task.abort();
     }
 }
