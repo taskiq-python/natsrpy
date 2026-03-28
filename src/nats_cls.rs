@@ -28,13 +28,15 @@ pub struct NatsCls {
     request_timeout: Option<TimeValue>,
 }
 
-/// Helper to read the client from the `RwLock`. Returns a clone of the Client if present.
-fn get_client(session: &RwLock<Option<async_nats::Client>>) -> NatsrpyResult<async_nats::Client> {
-    session
-        .read()
-        .map_err(|_| NatsrpyError::SessionError("Lock poisoned".to_string()))?
-        .clone()
-        .ok_or(NatsrpyError::NotInitialized)
+impl NatsCls {
+    // Small utility for getting nats session.
+    fn get_client(&self) -> NatsrpyResult<async_nats::Client> {
+        self.nats_session
+            .read()
+            .map_err(|_| NatsrpyError::PoisonedLock)?
+            .clone()
+            .ok_or(NatsrpyError::NotInitialized)
+    }
 }
 
 #[pyo3::pymethods]
@@ -137,7 +139,7 @@ impl NatsCls {
         reply: Option<String>,
         err_on_disconnect: bool,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         let data = bytes::Bytes::from(payload);
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
@@ -175,7 +177,7 @@ impl NatsCls {
         inbox: Option<String>,
         timeout: Option<TimeValue>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         let data = payload.map(bytes::Bytes::from);
         let headermap = headers
             .map(async_nats::HeaderMap::from_pydict)
@@ -198,7 +200,7 @@ impl NatsCls {
 
     pub fn drain<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Draining NATS session");
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         natsrpy_future(py, async move {
             client.drain().await?;
             Ok(())
@@ -214,7 +216,7 @@ impl NatsCls {
         queue: Option<String>,
     ) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Subscribing to '{subject}'");
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         natsrpy_future(py, async move {
             let subscriber = if let Some(queue) = queue {
                 client.queue_subscribe(subject, queue).await?
@@ -258,7 +260,7 @@ impl NatsCls {
                 "Either domain or api_prefix should be specified, not both.",
             )));
         }
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         natsrpy_future(py, async move {
             let mut builder =
                 async_nats::jetstream::ContextBuilder::new().concurrency_limit(concurrency_limit);
@@ -288,7 +290,7 @@ impl NatsCls {
     pub fn shutdown<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Closing nats session");
         let session = self.nats_session.clone();
-        let client = get_client(&session)?;
+        let client = self.get_client()?;
         // Set session to None immediately so no new operations can start.
         {
             let mut guard = session
@@ -304,7 +306,7 @@ impl NatsCls {
 
     pub fn flush<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         log::debug!("Flushing streams");
-        let client = get_client(&self.nats_session)?;
+        let client = self.get_client()?;
         natsrpy_future(py, async move {
             client.flush().await?;
             Ok(())
