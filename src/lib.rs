@@ -21,9 +21,6 @@
         clippy::too_many_arguments
 )]
 
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 pub mod exceptions;
 pub mod js;
 pub mod message;
