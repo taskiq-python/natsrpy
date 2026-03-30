@@ -1,4 +1,4 @@
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import AbstractContextManager
 from contextvars import Token
 from functools import wraps
@@ -12,6 +12,17 @@ from wrapt import wrap_function_wrapper
 from natsrpy import IteratorSubscription, Message, Nats
 
 from .span_builder import SpanBuilder
+
+
+def _cleanup_otel_context(
+    token: Token[Any] | None,
+    span_manager: AbstractContextManager[Any] | None,
+) -> None:
+    """Detach the current OTel context and end the active span, if any."""
+    if token:
+        context.detach(token)
+    if span_manager:
+        span_manager.__exit__(None, None, None)
 
 
 class NatsCoreInstrumentator:
@@ -37,7 +48,7 @@ class NatsCoreInstrumentator:
     def uninstrument() -> None:
         """Remove instrumentaitons from core Nats."""
         unwrap(Nats, "publish")
-        unwrap(IteratorSubscription, "__anext__")
+        unwrap(IteratorSubscription, "__aiter__")
 
     def _instrument_publish(self) -> None:
         def _wrapped_publish(
@@ -83,46 +94,61 @@ class NatsCoreInstrumentator:
 
     def _instrument_iter_subscription(self) -> None:
 
-        current_token: Token[Any] | None = None
-        span_manager: AbstractContextManager[Any] | None = None
+        async def _instrumented_iter(
+            sub: IteratorSubscription,
+        ) -> AsyncIterator[Message]:
+            """Async generator wrapping an iterator subscription with OTel context.
 
-        async def _custom_anext(
-            wrapper: Callable[..., Any],
-            _: Nats,
+            Each ``async for`` loop gets its own generator instance with
+            independent context state.  The ``finally`` block guarantees
+            cleanup when the loop exits — whether via ``break``, an
+            exception, or normal ``StopAsyncIteration``.
+            """
+            token: Token[Any] | None = None
+            span_manager: AbstractContextManager[Any] | None = None
+            try:
+                while True:
+                    # Clean up the *previous* iteration's context before
+                    # waiting for the next message.
+                    _cleanup_otel_context(token, span_manager)
+                    token = None
+                    span_manager = None
+
+                    try:
+                        msg = await IteratorSubscription.__anext__(sub)
+                    except StopAsyncIteration:
+                        return
+
+                    if not is_instrumentation_enabled():
+                        yield msg
+                        continue
+
+                    ctx = propagate.extract(msg.headers)
+                    token = context.attach(ctx)
+                    span = (
+                        SpanBuilder(self.tracer, SpanKind.CONSUMER, "receive")
+                        .with_message(msg)
+                        .build()
+                    )
+                    if span:
+                        span_manager = trace.use_span(span, end_on_exit=True)
+                        span_manager.__enter__()
+                    yield msg
+            finally:
+                _cleanup_otel_context(token, span_manager)
+
+        def _custom_aiter(
+            wrapper: Any,
+            instance: IteratorSubscription,
             args: tuple[Any, ...],
             kwargs: dict[str, Any],
-        ) -> Any:
-            nonlocal current_token
-            nonlocal span_manager
-
-            try:
-                msg = await wrapper(*args, **kwargs)
-            # For handling StopAsyncIteration error
-            # and possibly other exceptions.
-            finally:
-                if current_token:
-                    context.detach(current_token)
-                if span_manager:
-                    span_manager.__exit__(None, None, None)
-
-            if not is_instrumentation_enabled():
-                return msg
-            ctx = propagate.extract(msg.headers)
-            current_token = context.attach(ctx)
-            span = (
-                SpanBuilder(self.tracer, SpanKind.CONSUMER, "receive")
-                .with_message(msg)
-                .build()
-            )
-            if span:
-                span_manager = trace.use_span(span, end_on_exit=True)
-                span_manager.__enter__()
-            return msg
+        ) -> AsyncIterator[Message]:
+            return _instrumented_iter(instance)
 
         wrap_function_wrapper(
             "natsrpy._natsrpy_rs",
-            "IteratorSubscription.__anext__",
-            _custom_anext,
+            "IteratorSubscription.__aiter__",
+            _custom_aiter,
         )
 
     def _instrument_cb_subscription(self) -> None:
