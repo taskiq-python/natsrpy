@@ -32,7 +32,7 @@ jobs:
       - name: Run lint check
         uses: pre-commit/action@v3.0.0
         with:
-          extra_args: -a ${{ matrix.cmd }}
+          extra_args: -a -v ${{ matrix.cmd }}
   fmt:
     runs-on: ubuntu-latest
     steps:
