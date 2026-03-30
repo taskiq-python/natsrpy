@@ -90,13 +90,6 @@ class KVEntryIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[KVEntry]: ...
-    def next(self, timeout: float | timedelta | None = None) -> Future[KVEntry]:
-        """Receive the next key-value entry.
-
-        :param timeout: maximum time to wait in seconds or as a timedelta,
-            defaults to None (wait indefinitely).
-        :return: the next entry.
-        """
 
 @final
 class KeysIterator:
@@ -104,13 +97,6 @@ class KeysIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[str]: ...
-    def next(self, timeout: float | timedelta | None = None) -> Future[str]:
-        """Receive the next key.
-
-        :param timeout: maximum time to wait in seconds or as a timedelta,
-            defaults to None (wait indefinitely).
-        :return: the next key name.
-        """
 
 @final
 class KVConfig:

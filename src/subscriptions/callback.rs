@@ -3,7 +3,10 @@ use std::sync::Arc;
 use futures_util::StreamExt;
 use pyo3::{Bound, Py, PyAny, Python};
 
-use crate::{exceptions::rust_err::NatsrpyResult, utils::natsrpy_future};
+use crate::{
+    exceptions::rust_err::NatsrpyResult,
+    utils::{async_event::AsyncEvent, natsrpy_future},
+};
 
 enum UnsubscribeCommand {
     Unsubscribe,
@@ -11,10 +14,12 @@ enum UnsubscribeCommand {
     Drain,
 }
 
-#[pyo3::pyclass]
+#[pyo3::pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct CallbackSubscription {
     unsub_sender: Option<tokio::sync::mpsc::Sender<UnsubscribeCommand>>,
     reading_task: tokio::task::AbortHandle,
+    end_notify: AsyncEvent,
 }
 
 async fn process_message(message: async_nats::message::Message, py_callback: Arc<Py<PyAny>>) {
@@ -31,7 +36,7 @@ async fn process_message(message: async_nats::message::Message, py_callback: Arc
         Ok(())
     };
     if let Err(err) = task().await {
-        log::error!("Cannot process message {message:?}. Error: {err}");
+        log::error!("Cannot process message {message:#?}. Error: {err}");
     }
 }
 
@@ -40,6 +45,7 @@ async fn start_py_sub(
     py_callback: Arc<Py<PyAny>>,
     locals: pyo3_async_runtimes::TaskLocals,
     mut unsub_receiver: tokio::sync::mpsc::Receiver<UnsubscribeCommand>,
+    end_event: AsyncEvent,
 ) {
     loop {
         tokio::select! {
@@ -59,21 +65,19 @@ async fn start_py_sub(
                 match cmd {
                     Some(UnsubscribeCommand::Unsubscribe) => {
                         sub.unsubscribe().await.ok();
-                        break;
                     }
                     Some(UnsubscribeCommand::UnsubscribeAfter(limit)) => {
                         sub.unsubscribe_after(limit).await.ok();
-                        // Don't break — continue receiving up to `limit` messages.
                     }
                     Some(UnsubscribeCommand::Drain) => {
                         sub.drain().await.ok();
-                        break;
                     }
                     None => break,
                 }
             }
         }
     }
+    end_event.set();
 }
 
 impl CallbackSubscription {
@@ -81,14 +85,16 @@ impl CallbackSubscription {
         let (unsub_tx, unsub_rx) = tokio::sync::mpsc::channel(1);
         let task_locals = Python::attach(pyo3_async_runtimes::tokio::get_current_locals)?;
         let callback = Arc::new(callback);
+        let event = AsyncEvent::default();
         let task_handle = tokio::task::spawn(pyo3_async_runtimes::tokio::scope(
             task_locals.clone(),
-            start_py_sub(sub, callback, task_locals, unsub_rx),
+            start_py_sub(sub, callback, task_locals, unsub_rx, event.clone()),
         ))
         .abort_handle();
         Ok(Self {
             unsub_sender: Some(unsub_tx),
             reading_task: task_handle,
+            end_notify: event,
         })
     }
 }
@@ -127,6 +133,14 @@ impl CallbackSubscription {
                     "Subscription already closed".to_string(),
                 )
             })?;
+            Ok(())
+        })
+    }
+
+    pub fn wait<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let event = self.end_notify.clone();
+        natsrpy_future(py, async move {
+            event.wait().await;
             Ok(())
         })
     }

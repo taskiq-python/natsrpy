@@ -18,7 +18,7 @@ repos:
         name: python mypy
         always_run: true
         pass_filenames: false
-        args: ["python"]
+        args: ["python", "examples"]
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.7
     hooks:

@@ -4,9 +4,7 @@ use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, PyRef, Python};
 
 use crate::exceptions::rust_err::{NatsrpyError, NatsrpyResult};
-use crate::utils::futures::natsrpy_future_with_timeout;
 use crate::utils::natsrpy_future;
-use crate::utils::py_types::TimeValue;
 
 enum UnsubscribeCommand {
     Unsubscribe,
@@ -55,7 +53,8 @@ async fn sub_forwarder(
     }
 }
 
-#[pyo3::pyclass]
+#[pyo3::pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct IteratorSubscription {
     msg_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<async_nats::Message>>>,
     unsub_tx: Option<tokio::sync::mpsc::Sender<UnsubscribeCommand>>,
@@ -83,24 +82,15 @@ impl IteratorSubscription {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let msg_rx = self.msg_rx.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let mut rx = msg_rx.lock().await;
             rx.recv().await.map_or_else(
                 || Err(NatsrpyError::AsyncStopIteration),
                 crate::message::Message::try_from,
             )
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 
     #[pyo3(signature=(limit=None))]

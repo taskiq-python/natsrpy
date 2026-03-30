@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from natsrpy import Nats
@@ -37,9 +38,9 @@ async def test_publication_value_none(js: JetStream) -> None:
 async def test_subscribe_with_queue_group(nats: Nats) -> None:
     subj = uuid.uuid4().hex
     queue = f"queue-{uuid.uuid4().hex[:8]}"
-    sub = await nats.subscribe(subject=subj, queue=queue)
-    await nats.publish(subj, b"queue-msg")
-    msg = await sub.next(timeout=5.0)
+    async with nats.subscribe(subject=subj, queue=queue) as sub:
+        await nats.publish(subj, b"queue-msg")
+        msg = await asyncio.wait_for(anext(sub), timeout=5.0)
     assert msg.payload == b"queue-msg"
     await sub.unsubscribe()
 
@@ -47,9 +48,9 @@ async def test_subscribe_with_queue_group(nats: Nats) -> None:
 async def test_nats_publish_bytearray(nats: Nats) -> None:
     subj = uuid.uuid4().hex
     payload = bytearray(b"bytearray-payload")
-    sub = await nats.subscribe(subject=subj)
-    await nats.publish(subj, payload)
-    msg = await anext(sub)
+    async with nats.subscribe(subject=subj) as sub:
+        await nats.publish(subj, payload)
+        msg = await anext(sub)
     assert msg.payload == bytes(payload)
 
 
@@ -57,7 +58,7 @@ async def test_nats_publish_memoryview(nats: Nats) -> None:
     subj = uuid.uuid4().hex
     data = b"memoryview-payload"
     payload = memoryview(data)
-    sub = await nats.subscribe(subject=subj)
-    await nats.publish(subj, payload)
-    msg = await anext(sub)
+    async with nats.subscribe(subject=subj) as sub:
+        await nats.publish(subj, payload)
+        msg = await anext(sub)
     assert msg.payload == data

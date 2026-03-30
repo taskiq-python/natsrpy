@@ -12,24 +12,22 @@ async def main() -> None:
     # Here we create responder, that will be
     # answering to our requests.
     async def responder(message: Message) -> None:
-        print(f"[REQUEST]: {message.payload}, headers={message.headers}")  # noqa: T201
+        print(f"[REQUEST]: {message.payload!r}, headers={message.headers}")  # noqa: T201
         if message.reply:
             await nats.publish(
                 message.reply,
-                f"reply to {message.payload}",
+                f"reply to {message.payload!r}",
                 headers=message.headers,
             )
 
     # Start responder using callback-based subsciption.
-    sub = await nats.subscribe(subj, callback=responder)
-    # Send 3 concurrent requests.
-    responses = await asyncio.gather(
-        nats.request(subj, "request1"),
-        nats.request(subj, "request2", headers={"header": "value"}),
-        nats.request(subj, "request3", inbox="test-inbox"),
-    )
-    # Disconnect resonder.
-    await sub.drain()
+    async with nats.subscribe(subj, callback=responder):
+        # Send 3 concurrent requests.
+        responses = await asyncio.gather(
+            nats.request(subj, "request1"),
+            nats.request(subj, "request2", headers={"header": "value"}),
+            nats.request(subj, "request3", inbox="test-inbox"),
+        )
 
     # Iterate over replies.
     for resp in responses:

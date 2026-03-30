@@ -44,13 +44,13 @@ async def main() -> None:
     # We use messages() to get async iterator which we
     # use to get messages for push_consumer.
     async for push_message in await push_consumer.messages():
-        print(f"[FROM_PUSH] {push_message.payload}")  # noqa: T201
+        print(f"[FROM_PUSH] {push_message.payload!r}")  # noqa: T201
         await push_message.ack()
         break
 
     # Pull consumers have to request batches of messages.
     for pull_message in await pull_consumer.fetch(max_messages=10):
-        print(f"[FROM_PULL] {pull_message.payload}")  # noqa: T201
+        print(f"[FROM_PULL] {pull_message.payload!r}")  # noqa: T201
         await pull_message.ack()
 
     # Cleanup

@@ -39,7 +39,10 @@ pub mod _natsrpy_rs {
     #[pymodule_export]
     use super::nats_cls::NatsCls;
     #[pymodule_export]
-    use super::subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription};
+    use super::subscriptions::{
+        callback::CallbackSubscription, ctx_manager::SubscriptionCtxManager,
+        iterator::IteratorSubscription,
+    };
 
     #[pymodule_export]
     use super::exceptions::py_err::pymod as exceptions;

@@ -1,3 +1,4 @@
+import asyncio
 import io
 import tempfile
 import uuid
@@ -335,7 +336,7 @@ async def test_object_store_list_iterator_next(js: JetStream) -> None:
         await store.put("next-obj", b"data")
 
         iterator = await store.list()
-        info = await iterator.next(timeout=5.0)
+        info = await asyncio.wait_for(anext(iterator), timeout=5.0)
         assert isinstance(info, ObjectInfo)
         assert info.name == "next-obj"
     finally:
@@ -352,7 +353,7 @@ async def test_object_store_watch(js: JetStream) -> None:
 
         await store.put("watch-obj", b"watch-data")
 
-        info = await watcher.next(timeout=5.0)
+        info = await asyncio.wait_for(anext(watcher), timeout=5.0)
         assert isinstance(info, ObjectInfo)
         assert info.name == "watch-obj"
     finally:
@@ -368,8 +369,8 @@ async def test_object_store_watch_with_history(js: JetStream) -> None:
         await store.put("hist-obj-2", b"data2")
 
         watcher = await store.watch(with_history=True)
-        info1 = await watcher.next(timeout=5.0)
-        info2 = await watcher.next(timeout=5.0)
+        info1 = await asyncio.wait_for(anext(watcher), timeout=5.0)
+        info2 = await asyncio.wait_for(anext(watcher), timeout=5.0)
         assert {info1.name, info2.name} == {"hist-obj-1", "hist-obj-2"}
     finally:
         await js.object_store.delete(bucket)
@@ -386,7 +387,7 @@ async def test_object_store_watch_without_history(js: JetStream) -> None:
 
         await store.put("new-obj", b"new-data")
 
-        info = await watcher.next(timeout=5.0)
+        info = await asyncio.wait_for(anext(watcher), timeout=5.0)
         assert info.name == "new-obj"
     finally:
         await js.object_store.delete(bucket)
@@ -688,12 +689,12 @@ async def test_object_store_watch_delete_event(js: JetStream) -> None:
         watcher = await store.watch()
 
         await store.put("del-watch-obj", b"data")
-        info_put = await watcher.next(timeout=5.0)
+        info_put = await asyncio.wait_for(anext(watcher), timeout=5.0)
         assert info_put.name == "del-watch-obj"
         assert info_put.deleted is False
 
         await store.delete("del-watch-obj")
-        info_del = await watcher.next(timeout=5.0)
+        info_del = await asyncio.wait_for(anext(watcher), timeout=5.0)
         assert info_del.name == "del-watch-obj"
         assert info_del.deleted is True
     finally:
@@ -707,19 +708,7 @@ async def test_object_store_watch_timeout(js: JetStream) -> None:
     try:
         watcher = await store.watch()
         with pytest.raises(TimeoutError):
-            await watcher.next(timeout=0.1)
-    finally:
-        await js.object_store.delete(bucket)
-
-
-async def test_object_store_watch_timeout_timedelta(js: JetStream) -> None:
-    bucket = f"test-os-watchtdelta-{uuid.uuid4().hex[:8]}"
-    config = ObjectStoreConfig(bucket=bucket)
-    store = await js.object_store.create(config)
-    try:
-        watcher = await store.watch()
-        with pytest.raises(TimeoutError):
-            await watcher.next(timeout=timedelta(milliseconds=100))
+            await asyncio.wait_for(anext(watcher), timeout=0.1)
     finally:
         await js.object_store.delete(bucket)
 
@@ -828,7 +817,7 @@ async def test_object_store_watch_multiple_events(js: JetStream) -> None:
 
         names = set()
         for _ in range(3):
-            info = await watcher.next(timeout=5.0)
+            info = await asyncio.wait_for(anext(watcher), timeout=5.0)
             names.add(info.name)
         assert names == {"ev-1", "ev-2", "ev-3"}
     finally:

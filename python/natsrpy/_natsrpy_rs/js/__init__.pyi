@@ -159,6 +159,10 @@ class JetStreamMessage:
     def token(self) -> str | None:
         """Authentication token, if applicable."""
 
+    @property
+    def length(self) -> int:
+        """Message's payload length."""
+
     def ack(self, double: bool = False) -> Future[None]:
         """Acknowledge that a message was handled.
 
@@ -208,3 +212,5 @@ class JetStreamMessage:
 
         :param double: whether to wait for server response, defaults to False.
         """
+
+    def __len__(self) -> int: ...

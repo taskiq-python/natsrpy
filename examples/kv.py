@@ -30,8 +30,6 @@ async def main() -> None:
 
     await kv.delete("test-key")
 
-    # Alternatively you can
-    # use await watcher.next()
     async for event in watcher:
         print("[EVENT]", event)  # noqa: T201
         break
