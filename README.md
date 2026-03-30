@@ -7,7 +7,18 @@ This is a client library for [NATS](https://nats.io) written in rust.
 
 ## Sponsors of this project
 
-Special thanks to [Intree](https://intree.com) for supporting development of this project.
+Special thanks for supporting development of this project.
+
+<div align="center">
+    <a href="https://intree.com">
+        <picture align="center">
+          <source media="(prefers-color-scheme: dark)" srcset="https://github.com/user-attachments/assets/07a81bdc-639d-44d9-afa2-49203bfb38a9">
+          <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/a2b0e9bc-cebb-4565-af0a-780e79ef2ce5">
+         <img alt="Fallback image description" width="400">
+        </picture>
+    </a>
+    <p>share to connect</p>
+</div>
 
 ## installation
 
