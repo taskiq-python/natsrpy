@@ -13,16 +13,24 @@ use crate::{
     },
 };
 
-#[pyo3::pyclass(name = "Nats")]
+#[pyo3::pyclass(name = "Nats", dict, weakref)]
 pub struct NatsCls {
     nats_session: Arc<RwLock<Option<async_nats::Client>>>,
+    #[pyo3(get)]
     addr: Vec<String>,
+    #[pyo3(get)]
     user_and_pass: Option<(String, String)>,
+    #[pyo3(get)]
     nkey: Option<String>,
+    #[pyo3(get)]
     token: Option<String>,
+    #[pyo3(get)]
     custom_inbox_prefix: Option<String>,
+    #[pyo3(get)]
     read_buffer_capacity: u16,
+    #[pyo3(get)]
     sender_capacity: usize,
+    #[pyo3(get)]
     max_reconnects: Option<usize>,
     connection_timeout: TimeValue,
     request_timeout: Option<TimeValue>,

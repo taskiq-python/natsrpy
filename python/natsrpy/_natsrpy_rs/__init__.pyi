@@ -33,27 +33,12 @@ class Message:
     description: str | None
     length: int
 
+    def __len__(self) -> int: ...
+
 @final
 class IteratorSubscription:
-    """Async iterator subscription for receiving NATS messages.
-
-    Returned by :meth:`Nats.subscribe` when no callback is provided.
-    Messages can be received using ``async for`` or by calling :meth:`next`
-    directly.
-    """
-
-    def __aiter__(self) -> IteratorSubscription: ...
+    def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[Message]: ...
-    def next(self, timeout: float | timedelta | None = None) -> Future[Message]:
-        """Receive the next message from the subscription.
-
-        :param timeout: maximum time to wait for a message in seconds
-            or as a timedelta, defaults to None (wait indefinitely).
-        :return: the next message.
-        :raises StopAsyncIteration: when the subscription is drained or
-            unsubscribed.
-        """
-
     def unsubscribe(self, limit: int | None = None) -> Future[None]:
         """Unsubscribe from the subject.
 
@@ -96,6 +81,22 @@ class Nats:
     access over a connection to one or more NATS servers.
     """
 
+    @property
+    def addr(self) -> list[str]: ...
+    @property
+    def user_and_pass(self) -> tuple[str, str]: ...
+    @property
+    def nkey(self) -> str | None: ...
+    @property
+    def token(self) -> str | None: ...
+    @property
+    def custom_inbox_prefix(self) -> str | None: ...
+    @property
+    def read_buffer_capacity(self) -> int: ...
+    @property
+    def sender_capacity(self) -> int: ...
+    @property
+    def max_reconnects(self) -> int | None: ...
     def __new__(
         cls,
         /,

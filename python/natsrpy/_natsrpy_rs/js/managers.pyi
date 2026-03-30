@@ -39,18 +39,6 @@ class ConsumersIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[PullConsumer | PushConsumer]: ...
-    def next(
-        self,
-        timeout: float | timedelta | None = None,
-    ) -> Future[PullConsumer | PushConsumer]:
-        """Receive the next consumer from the stream.
-
-        :param timeout: maximum time to wait for a message in seconds
-            or as a timedelta, defaults to None (wait indefinitely).
-        :return: the next consumer.
-        :raises StopAsyncIteration: when the subscription is drained or
-            unsubscribed.
-        """
 
 @final
 class ConsumersNamesIterator:
@@ -63,15 +51,6 @@ class ConsumersNamesIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[str]: ...
-    def next(self, timeout: float | timedelta | None = None) -> Future[str]:
-        """Receive the next consumer name from the stream.
-
-        :param timeout: maximum time to wait for a message in seconds
-            or as a timedelta, defaults to None (wait indefinitely).
-        :return: the next consumer name.
-        :raises StopAsyncIteration: when the subscription is drained or
-            unsubscribed.
-        """
 
 @final
 class StreamsManager:

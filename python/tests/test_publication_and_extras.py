@@ -1,3 +1,4 @@
+import asyncio
 import uuid
 
 from natsrpy import Nats
@@ -39,7 +40,7 @@ async def test_subscribe_with_queue_group(nats: Nats) -> None:
     queue = f"queue-{uuid.uuid4().hex[:8]}"
     sub = await nats.subscribe(subject=subj, queue=queue)
     await nats.publish(subj, b"queue-msg")
-    msg = await sub.next(timeout=5.0)
+    msg = await asyncio.wait_for(anext(sub), timeout=5.0)
     assert msg.payload == b"queue-msg"
     await sub.unsubscribe()
 

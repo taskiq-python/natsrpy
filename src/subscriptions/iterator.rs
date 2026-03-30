@@ -4,9 +4,7 @@ use futures_util::StreamExt;
 use pyo3::{Bound, PyAny, PyRef, Python};
 
 use crate::exceptions::rust_err::{NatsrpyError, NatsrpyResult};
-use crate::utils::futures::natsrpy_future_with_timeout;
 use crate::utils::natsrpy_future;
-use crate::utils::py_types::TimeValue;
 
 enum UnsubscribeCommand {
     Unsubscribe,
@@ -83,24 +81,15 @@ impl IteratorSubscription {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let msg_rx = self.msg_rx.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let mut rx = msg_rx.lock().await;
             rx.recv().await.map_or_else(
                 || Err(NatsrpyError::AsyncStopIteration),
                 crate::message::Message::try_from,
             )
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 
     #[pyo3(signature=(limit=None))]

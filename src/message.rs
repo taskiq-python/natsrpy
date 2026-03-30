@@ -84,4 +84,8 @@ impl Message {
             len = self.length,
         )
     }
+    #[must_use]
+    pub const fn __len__(&self) -> usize {
+        self.length
+    }
 }

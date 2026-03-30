@@ -12,11 +12,11 @@ async def main() -> None:
     # Here we create responder, that will be
     # answering to our requests.
     async def responder(message: Message) -> None:
-        print(f"[REQUEST]: {message.payload}, headers={message.headers}")  # noqa: T201
+        print(f"[REQUEST]: {message.payload!r}, headers={message.headers}")  # noqa: T201
         if message.reply:
             await nats.publish(
                 message.reply,
-                f"reply to {message.payload}",
+                f"reply to {message.payload!r}",
                 headers=message.headers,
             )
 

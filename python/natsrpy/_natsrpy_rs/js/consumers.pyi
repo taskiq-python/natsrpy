@@ -282,16 +282,6 @@ class MessagesIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[JetStreamMessage]: ...
-    def next(
-        self,
-        timeout: float | timedelta | None = None,
-    ) -> Future[JetStreamMessage]:
-        """Receive the next message from the consumer.
-
-        :param timeout: maximum time to wait in seconds or as a timedelta,
-            defaults to None (wait indefinitely).
-        :return: the next JetStream message.
-        """
 
 @final
 class PushConsumer:

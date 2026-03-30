@@ -15,7 +15,6 @@ use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::stream::{Placement, StorageType},
     utils::{
-        futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
         natsrpy_future,
         py_types::{SendableValue, TimeValue, ToPyDate},
@@ -428,24 +427,15 @@ impl ObjectInfoIterator {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.streamer.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let value = ctx.lock().await.next().await;
             match value {
                 Some(info) => ObjectInfo::try_from(info?),
                 None => Err(NatsrpyError::AsyncStopIteration),
             }
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 }
 

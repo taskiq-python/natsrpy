@@ -30,7 +30,7 @@ async def test_iterator_next_with_timeout(nats: Nats) -> None:
     subj = uuid.uuid4().hex
     sub = await nats.subscribe(subject=subj)
     await nats.publish(subj, b"timeout-test")
-    message = await sub.next(timeout=5.0)
+    message = await asyncio.wait_for(anext(sub), timeout=5.0)
     assert message.payload == b"timeout-test"
 
 
@@ -61,8 +61,8 @@ async def test_iterator_unsubscribe_with_limit(nats: Nats) -> None:
     await sub.unsubscribe(limit=2)
     await nats.publish(subj, b"msg-1")
     await nats.publish(subj, b"msg-2")
-    msg1 = await sub.next(timeout=5.0)
-    msg2 = await sub.next(timeout=5.0)
+    msg1 = await asyncio.wait_for(anext(sub), timeout=5.0)
+    msg2 = await asyncio.wait_for(anext(sub), timeout=5.0)
     assert msg1.payload == b"msg-1"
     assert msg2.payload == b"msg-2"
 

@@ -3,7 +3,6 @@ use std::{sync::Arc, time::Duration};
 use crate::{
     js::{self, stream::StreamInfo},
     utils::{
-        futures::natsrpy_future_with_timeout,
         py_types::{SendableValue, TimeValue, ToPyDate},
         streamer::Streamer,
     },
@@ -485,24 +484,15 @@ impl KeysIterator {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.streamer.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let value = ctx.lock().await.next().await;
             match value {
                 Some(entry) => Ok(entry?),
                 None => Err(NatsrpyError::AsyncStopIteration),
             }
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 }
 
@@ -537,24 +527,15 @@ impl KVEntryIterator {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.streamer.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let value = ctx.lock().await.next().await;
             match value {
                 Some(entry) => KVEntry::try_from(entry?),
                 None => Err(NatsrpyError::AsyncStopIteration),
             }
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 }
 

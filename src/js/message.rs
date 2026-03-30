@@ -92,6 +92,11 @@ impl JetStreamMessage {
     }
     #[getter]
     #[must_use]
+    pub const fn length(&self) -> usize {
+        self.message.length
+    }
+    #[getter]
+    #[must_use]
     pub const fn reply(&self) -> &Option<String> {
         &self.message.reply
     }
@@ -197,5 +202,9 @@ impl JetStreamMessage {
     #[must_use]
     pub fn __repr__(&self) -> String {
         self.message.__repr__()
+    }
+    #[must_use]
+    pub const fn __len__(&self) -> usize {
+        self.message.length
     }
 }
