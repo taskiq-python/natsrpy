@@ -46,7 +46,7 @@ class NatsCoreInstrumentator:
 
     @staticmethod
     def uninstrument() -> None:
-        """Remove instrumentaitons from core Nats."""
+        """Remove instrumentations from core Nats."""
         unwrap(Nats, "publish")
         unwrap(IteratorSubscription, "__aiter__")
 
