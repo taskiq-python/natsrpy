@@ -53,7 +53,8 @@ async fn sub_forwarder(
     }
 }
 
-#[pyo3::pyclass]
+#[pyo3::pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct IteratorSubscription {
     msg_rx: Arc<tokio::sync::Mutex<tokio::sync::mpsc::Receiver<async_nats::Message>>>,
     unsub_tx: Option<tokio::sync::mpsc::Sender<UnsubscribeCommand>>,

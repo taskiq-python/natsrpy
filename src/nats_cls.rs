@@ -1,10 +1,10 @@
 use async_nats::{Subject, client::traits::Publisher, message::OutboundMessage};
-use pyo3::{Bound, IntoPyObjectExt, Py, PyAny, Python, types::PyDict};
+use pyo3::{Bound, Py, PyAny, Python, types::PyDict};
 use std::sync::{Arc, RwLock};
 
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
-    subscriptions::{callback::CallbackSubscription, iterator::IteratorSubscription},
+    subscriptions::ctx_manager::SubscriptionCtxManager,
     utils::{
         futures::natsrpy_future_with_timeout,
         headers::NatsrpyHeadermapExt,
@@ -216,29 +216,17 @@ impl NatsCls {
     }
 
     #[pyo3(signature=(subject, callback=None, queue=None))]
-    pub fn subscribe<'py>(
+    pub fn subscribe(
         &self,
-        py: Python<'py>,
         subject: String,
         callback: Option<Py<PyAny>>,
         queue: Option<String>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    ) -> NatsrpyResult<SubscriptionCtxManager> {
         log::debug!("Subscribing to '{subject}'");
         let client = self.get_client()?;
-        natsrpy_future(py, async move {
-            let subscriber = if let Some(queue) = queue {
-                client.queue_subscribe(subject, queue).await?
-            } else {
-                client.subscribe(subject).await?
-            };
-            if let Some(cb) = callback {
-                let sub = CallbackSubscription::new(subscriber, cb)?;
-                Ok(Python::attach(|gil| sub.into_py_any(gil))?)
-            } else {
-                let sub = IteratorSubscription::new(subscriber);
-                Ok(Python::attach(|gil| sub.into_py_any(gil))?)
-            }
-        })
+        Ok(SubscriptionCtxManager::new(
+            client, subject, callback, queue,
+        ))
     }
 
     #[pyo3(signature = (

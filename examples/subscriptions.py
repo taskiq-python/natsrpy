@@ -14,37 +14,36 @@ async def main() -> None:
         print(f"[FROM_CALLBACK] {message.payload!r}")  # noqa: T201
         cb_lock.set()
 
-    # When subscribing you can set callback.
-    # In that case CallbackSubscription is returned.
-    # This type of subscription cannot be iterated.
-    cb_sub = await nats.subscribe("cb-subj", callback=callback)
+    async with (
+        # When subscribing you can set callback.
+        # In that case CallbackSubscription is returned.
+        # This type of subscription cannot be iterated.
+        nats.subscribe("cb-subj", callback=callback) as cb_sub,
+        # When callback is not set, you get a subscription
+        # that should be used along with `async for`
+        nats.subscribe("iter-subj") as iter_sub,
+        # Subscriptions with queue argument create
+        # subscription with a queue group to distribute
+        # messages along all subscribers.
+        nats.subscribe("queue-subj", queue="example-queue") as queue_sub,
+    ):
+        await nats.publish("cb-subj", "message for callback")
+        await nats.publish("iter-subj", "message for iterator")
+        await nats.publish("queue-subj", "message for queue sub")
 
-    # When callback is not set, you get a subscription
-    # that should be used along with `async for`
-    iter_sub = await nats.subscribe("iter-subj")
+        # We can unsubscribe after a particular amount of messages.
+        await iter_sub.unsubscribe(limit=1)
+        await cb_sub.unsubscribe(limit=1)
+        await queue_sub.unsubscribe(limit=1)
 
-    # Subscriptions with queue argument create
-    # subscription with a queue group to distribute
-    # messages along all subscribers.
-    queue_sub = await nats.subscribe("queue-subj", queue="example-queue")
+        async for message in iter_sub:
+            print(f"[FROM_ITERATOR] {message.payload!r}")  # noqa: T201
 
-    await nats.publish("cb-subj", "message for callback")
-    await nats.publish("iter-subj", "message for iterator")
-    await nats.publish("queue-subj", "message for queue sub")
+        async for message in queue_sub:
+            print(f"[FROM_QUEUED] {message.payload!r}")  # noqa: T201
 
-    # We can unsubscribe after a particular amount of messages.
-    await iter_sub.unsubscribe(limit=1)
-    await cb_sub.unsubscribe(limit=1)
-    await queue_sub.unsubscribe(limit=1)
-
-    async for message in iter_sub:
-        print(f"[FROM_ITERATOR] {message.payload!r}")  # noqa: T201
-
-    async for message in queue_sub:
-        print(f"[FROM_QUEUED] {message.payload!r}")  # noqa: T201
-
-    # Making sure that the message in callback is received.
-    await cb_lock.wait()
+        # Making sure that the message in callback is received.
+        await cb_lock.wait()
 
     # Don't forget to call shutdown.
     await nats.shutdown()

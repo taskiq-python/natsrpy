@@ -1,11 +1,14 @@
 from asyncio import Future
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
-from typing import Any, final, overload
+from types import TracebackType
+from typing import Any, Generic, TypeVar, final, overload
 
 from typing_extensions import Self
 
 from . import exceptions, js
+
+_T = TypeVar("_T")
 
 @final
 class Message:
@@ -72,6 +75,16 @@ class CallbackSubscription:
 
         Unsubscribes and flushes any remaining messages before closing.
         """
+
+@final
+class SubscriptionCtxManager(Generic[_T]):
+    def __aenter__(self) -> Future[_T]: ...
+    async def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None = None,
+        _exc_val: BaseException | None = None,
+        _exc_tb: TracebackType | None = None,
+    ) -> Future[None]: ...
 
 @final
 class Nats:
@@ -208,14 +221,14 @@ class Nats:
         subject: str,
         callback: Callable[[Message], Awaitable[None]],
         queue: str | None = None,
-    ) -> Future[CallbackSubscription]: ...
+    ) -> SubscriptionCtxManager[CallbackSubscription]: ...
     @overload
     def subscribe(
         self,
         subject: str,
         callback: None = None,
         queue: str | None = None,
-    ) -> Future[IteratorSubscription]: ...
+    ) -> SubscriptionCtxManager[IteratorSubscription]: ...
     def jetstream(
         self,
         *,

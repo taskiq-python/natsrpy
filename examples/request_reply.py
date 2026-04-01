@@ -21,15 +21,13 @@ async def main() -> None:
             )
 
     # Start responder using callback-based subsciption.
-    sub = await nats.subscribe(subj, callback=responder)
-    # Send 3 concurrent requests.
-    responses = await asyncio.gather(
-        nats.request(subj, "request1"),
-        nats.request(subj, "request2", headers={"header": "value"}),
-        nats.request(subj, "request3", inbox="test-inbox"),
-    )
-    # Disconnect resonder.
-    await sub.drain()
+    async with nats.subscribe(subj, callback=responder):
+        # Send 3 concurrent requests.
+        responses = await asyncio.gather(
+            nats.request(subj, "request1"),
+            nats.request(subj, "request2", headers={"header": "value"}),
+            nats.request(subj, "request3", inbox="test-inbox"),
+        )
 
     # Iterate over replies.
     for resp in responses:

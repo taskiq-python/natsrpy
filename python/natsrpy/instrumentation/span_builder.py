@@ -1,3 +1,4 @@
+import enum
 from typing import Any
 
 from opentelemetry.semconv._incubating.attributes.messaging_attributes import (
@@ -15,10 +16,18 @@ from natsrpy.js import JetStreamMessage
 DEFAULT_ATTRS = {MESSAGING_SYSTEM: "nats"}
 
 
+@enum.unique
+class SpanAction(enum.Enum):
+    """Available span actions."""
+
+    PUBLISH = "publish"
+    RECEIVE = "receive"
+
+
 class SpanBuilder:
     """Helper class for span creation."""
 
-    def __init__(self, tracer: Tracer, kind: SpanKind, action: str) -> None:
+    def __init__(self, tracer: Tracer, kind: SpanKind, action: SpanAction) -> None:
         self.tracer = tracer
         self.attributes: dict[str, Any] = DEFAULT_ATTRS.copy()
         self.kind = kind
@@ -54,7 +63,7 @@ class SpanBuilder:
     def build(self) -> Span:
         """Build resulting span."""
         return self.tracer.start_span(
-            self.action,
+            self.action.value.lower(),
             kind=self.kind,
             attributes=self.attributes,
         )

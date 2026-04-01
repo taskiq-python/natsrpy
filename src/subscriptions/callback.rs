@@ -11,7 +11,8 @@ enum UnsubscribeCommand {
     Drain,
 }
 
-#[pyo3::pyclass]
+#[pyo3::pyclass(from_py_object)]
+#[derive(Clone)]
 pub struct CallbackSubscription {
     unsub_sender: Option<tokio::sync::mpsc::Sender<UnsubscribeCommand>>,
     reading_task: tokio::task::AbortHandle,

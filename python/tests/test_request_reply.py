@@ -10,11 +10,11 @@ async def test_request_sends_with_reply(nats: Nats) -> None:
     received_msgs: list[Message] = []
 
     async def responder() -> None:
-        sub = await nats.subscribe(subject=subj)
-        msg = await anext(sub)
-        received_msgs.append(msg)
-        if msg.reply:
-            await nats.publish(msg.reply, b"reply-data")
+        async with nats.subscribe(subject=subj) as sub:
+            msg = await anext(sub)
+            received_msgs.append(msg)
+            if msg.reply:
+                await nats.publish(msg.reply, b"reply-data")
 
     task = asyncio.create_task(responder())
     await asyncio.sleep(0.1)
@@ -34,11 +34,11 @@ async def test_request_with_headers(nats: Nats) -> None:
     received_msgs: list[Message] = []
 
     async def responder() -> None:
-        sub = await nats.subscribe(subject=subj)
-        msg = await anext(sub)
-        received_msgs.append(msg)
-        if msg.reply:
-            await nats.publish(msg.reply, b"reply")
+        async with nats.subscribe(subject=subj) as sub:
+            msg = await anext(sub)
+            received_msgs.append(msg)
+            if msg.reply:
+                await nats.publish(msg.reply, b"reply")
 
     task = asyncio.create_task(responder())
     await asyncio.sleep(0.1)
@@ -55,11 +55,11 @@ async def test_request_none_payload(nats: Nats) -> None:
     received_msgs: list[Message] = []
 
     async def responder() -> None:
-        sub = await nats.subscribe(subject=subj)
-        msg = await anext(sub)
-        received_msgs.append(msg)
-        if msg.reply:
-            await nats.publish(msg.reply, b"reply")
+        async with nats.subscribe(subject=subj) as sub:
+            msg = await anext(sub)
+            received_msgs.append(msg)
+            if msg.reply:
+                await nats.publish(msg.reply, b"reply")
 
     task = asyncio.create_task(responder())
     await asyncio.sleep(0.1)
