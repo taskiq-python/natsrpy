@@ -8,11 +8,8 @@ async def main() -> None:
     nats = Nats(["nats://localhost:4222"])
     await nats.startup()
 
-    cb_lock = asyncio.Event()
-
     async def callback(message: Message) -> None:
         print(f"[FROM_CALLBACK] {message.payload!r}")  # noqa: T201
-        cb_lock.set()
 
     # For callback subscriptions you can use detatch method.
     #
@@ -28,8 +25,8 @@ async def main() -> None:
 
     nats.publish("cb-subj", "message for callback")
 
-    # Making sure that the message in callback is received.
-    await cb_lock.wait()
+    # Waiting for subscriber to read all the messages.
+    await cb_sub.wait()
 
     # Don't forget to call shutdown.
     await nats.shutdown()

@@ -76,6 +76,15 @@ class CallbackSubscription:
         Unsubscribes and flushes any remaining messages before closing.
         """
 
+    def wait(self) -> Future[None]:
+        """
+        Wait for all messages to be read.
+
+        This method blocks until the subscription
+        is dropped. Either by the server or
+        by the client (using unsubscribe).
+        """
+
 @final
 class SubscriptionCtxManager(Generic[_T]):
     def detatch(self) -> Future[_T]:
