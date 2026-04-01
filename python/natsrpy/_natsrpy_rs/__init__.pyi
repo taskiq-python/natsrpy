@@ -78,6 +78,20 @@ class CallbackSubscription:
 
 @final
 class SubscriptionCtxManager(Generic[_T]):
+    def detatch(self) -> Future[_T]:
+        """
+        Detatch from the context.
+
+        This might be a useful utility for callback
+        functions. It removes context manager
+        and lets subscription live on its own.
+
+        But please be aware, that when used
+        with iterable subscriptions, receved messages
+        will not be automatically traced using our
+        built-in instrumentation.
+        """
+
     def __aenter__(self) -> Future[_T]: ...
     async def __aexit__(
         self,

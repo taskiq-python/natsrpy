@@ -76,6 +76,10 @@ impl SubscriptionCtxManager {
         })
     }
 
+    pub fn detatch<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        self.__aenter__(py)
+    }
+
     #[pyo3(signature=(
         _exc_type=None,
         _exc_val=None,
