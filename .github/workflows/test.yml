@@ -14,17 +14,25 @@ jobs:
           - black
           - ruff
           - mypy
+          - stubtest
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.11"
+          python-version: "3.x"
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          override: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
       - name: Run lint check
         uses: pre-commit/action@v3.0.0
         with:
-          extra_args: -a ${{ matrix.cmd }}
+          extra_args: -a -v ${{ matrix.cmd }}
   fmt:
     runs-on: ubuntu-latest
     steps:
@@ -52,33 +60,6 @@ jobs:
         with:
           token: ${{secrets.GITHUB_TOKEN}}
           deny: warnings
-  stubtest:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: clippy
-          override: true
-      - uses: actions/setup-python@v6
-        with:
-          python-version: 3.x
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-      - id: setup-venv
-        name: Setup virtualenv
-        run: python -m venv .venv
-      - name: Build lib
-        uses: PyO3/maturin-action@v1
-        with:
-          command: dev --uv
-          sccache: true
-      - name: Run stubtest
-        run: |
-          set -e
-          source .venv/bin/activate
-          stubtest --ignore-disjoint-bases natsrpy
   pytest:
     runs-on: ubuntu-latest
     steps:

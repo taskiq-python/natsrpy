@@ -102,13 +102,6 @@ class ObjectInfoIterator:
 
     def __aiter__(self) -> Self: ...
     def __anext__(self) -> Future[ObjectInfo]: ...
-    def next(self, timeout: float | timedelta | None = None) -> Future[ObjectInfo]:
-        """Receive the next object info entry.
-
-        :param timeout: maximum time to wait in seconds or as a timedelta,
-            defaults to None (wait indefinitely).
-        :return: the next object info.
-        """
 
 @final
 class ObjectStore:

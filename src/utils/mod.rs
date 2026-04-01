@@ -1,3 +1,4 @@
+pub mod async_event;
 pub mod futures;
 pub mod headers;
 pub mod py;

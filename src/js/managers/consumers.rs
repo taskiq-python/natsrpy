@@ -7,10 +7,7 @@ use tokio::sync::Mutex;
 use crate::{
     exceptions::rust_err::{NatsrpyError, NatsrpyResult},
     js::consumers::{self, pull::PullConsumer, push::PushConsumer},
-    utils::{
-        futures::natsrpy_future_with_timeout, natsrpy_future, py_types::TimeValue,
-        streamer::Streamer,
-    },
+    utils::{natsrpy_future, py_types::TimeValue, streamer::Streamer},
 };
 
 #[pyo3::pyclass]
@@ -51,24 +48,15 @@ impl ConsumersNamesIterator {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.streamer.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let value = ctx.lock().await.next().await;
             match value {
                 Some(name) => Ok(name?),
                 None => Err(NatsrpyError::AsyncStopIteration),
             }
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 }
 
@@ -97,15 +85,10 @@ impl ConsumersIterator {
         slf
     }
 
-    #[pyo3(signature=(timeout=None))]
-    pub fn next<'py>(
-        &self,
-        py: Python<'py>,
-        timeout: Option<TimeValue>,
-    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
         let ctx = self.streamer.clone();
         let stream = self.stream.clone();
-        natsrpy_future_with_timeout(py, timeout, async move {
+        natsrpy_future(py, async move {
             let value = ctx.lock().await.next().await;
             match value {
                 Some(info) => {
@@ -131,10 +114,6 @@ impl ConsumersIterator {
                 None => Err(NatsrpyError::AsyncStopIteration),
             }
         })
-    }
-
-    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        self.next(py, None)
     }
 }
 
