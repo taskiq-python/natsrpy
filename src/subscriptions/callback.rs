@@ -36,7 +36,7 @@ async fn process_message(message: async_nats::message::Message, py_callback: Arc
         Ok(())
     };
     if let Err(err) = task().await {
-        log::error!("Cannot process message {message:#?}. Error: {err}");
+        log::error!("Cannot process message {message:?}. Error: {err}");
     }
 }
 

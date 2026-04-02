@@ -1,5 +1,3 @@
-import contextlib
-import sys
 from collections.abc import AsyncGenerator, Awaitable, Callable
 from functools import wraps
 from types import TracebackType
@@ -60,6 +58,26 @@ class IterableSubscriptionProxy(ObjectProxy):  # type: ignore
         self._self_cancel_ctx = (token, span_ctx)
 
         return next_msg
+
+
+class SubscriptionCtxProxy(ObjectProxy):  # type: ignore
+    """Proxy object for subscription context manager."""
+
+    def __init__(self, wrapped: Any, tracer: Tracer) -> None:
+        super().__init__(wrapped)
+        self._self_tracer = tracer
+        self._self_sub = None
+
+    async def __aenter__(self) -> Any:
+        sub = await self.__wrapped__.__aenter__()
+        if isinstance(sub, IteratorSubscription):
+            sub = IterableSubscriptionProxy(sub, self._self_tracer)
+        self._self_sub = sub
+        return sub
+
+    def __aexit__(self, *args: Any, **kwargs: dict[Any, Any]) -> Any:
+        if self._self_sub and isinstance(self._self_sub, IterableSubscriptionProxy):
+            self._self_sub.__cancel_ctx__(*args, **kwargs)
 
 
 class NatsCoreInstrumentator:
@@ -127,7 +145,7 @@ class NatsCoreInstrumentator:
 
         wrap_function_wrapper("natsrpy._natsrpy_rs", "Nats.publish", _publish_decorator)
 
-    def _instrument_subscriptions(self) -> None:  # noqa: C901
+    def _instrument_subscriptions(self) -> None:
         """Create instrumentation for."""
 
         def callback_wrapper(
@@ -170,27 +188,15 @@ class NatsCoreInstrumentator:
                 callback = callback_wrapper(callback)
             return (subject, callback, queue)
 
-        @contextlib.asynccontextmanager
-        async def wrapper(
+        def wrapper(
             wrapper: Any,
             _: Nats,
             args: tuple[Any, ...],
             kwargs: dict[str, Any],
         ) -> AsyncGenerator[Any, None]:
-
-            async with wrapper(*process_args(*args, **kwargs)) as original_sub:
-                if isinstance(original_sub, IteratorSubscription):
-                    ret = IterableSubscriptionProxy(original_sub, self.tracer)
-                else:
-                    ret = original_sub
-                try:
-                    yield ret
-                except BaseException:
-                    if isinstance(ret, IterableSubscriptionProxy):
-                        ret.__cancel_ctx__(*sys.exc_info())
-                    raise
-                finally:
-                    if isinstance(ret, IterableSubscriptionProxy):
-                        ret.__cancel_ctx__()
+            return SubscriptionCtxProxy(
+                wrapper(*process_args(*args, **kwargs)),
+                self.tracer,
+            )
 
         wrap_function_wrapper("natsrpy._natsrpy_rs", "Nats.subscribe", wrapper)
