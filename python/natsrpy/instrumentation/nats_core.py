@@ -3,7 +3,7 @@ from functools import wraps
 from types import TracebackType
 from typing import Any
 
-from opentelemetry import context, propagate, trace
+from opentelemetry import context, propagate, trace  # type: ignore
 from opentelemetry.instrumentation.utils import is_instrumentation_enabled, unwrap
 from opentelemetry.trace import SpanKind, Tracer
 from typing_extensions import Self
@@ -11,16 +11,26 @@ from wrapt import ObjectProxy, wrap_function_wrapper
 
 from natsrpy import IteratorSubscription, Message, Nats
 
+from .ctx_manager_wrapper import AsyncCtxManagerProxy
 from .span_builder import SpanAction, SpanBuilder
 
 
 class IterableSubscriptionProxy(ObjectProxy):  # type: ignore
     """Proxy for iterable subscriptions."""
 
-    def __init__(self, wrapped: IteratorSubscription, tracer: Tracer) -> None:
+    def __init__(
+        self,
+        wrapped: IteratorSubscription,
+        tracer: Tracer,
+        capture_headers: bool,
+        capture_body: bool,
+    ) -> None:
         super().__init__(wrapped)
         # Proxy-local attrs should have _self_ prefix
         self._self_tracer = tracer
+        self._self_capture_body = capture_body
+        self._self_capture_headers = capture_headers
+
         self._self_cancel_ctx: tuple[Any, Any] | None = None
 
     def __aiter__(self) -> Self:
@@ -50,7 +60,11 @@ class IterableSubscriptionProxy(ObjectProxy):  # type: ignore
         token = context.attach(new_ctx)
         span = (
             SpanBuilder(self._self_tracer, SpanKind.CONSUMER, SpanAction.RECEIVE)
-            .with_message(next_msg)
+            .with_message(
+                next_msg,
+                capture_body=self._self_capture_body,
+                capture_headers=self._self_capture_headers,
+            )
             .build()
         )
         span_ctx = trace.use_span(span, end_on_exit=True)
@@ -58,26 +72,6 @@ class IterableSubscriptionProxy(ObjectProxy):  # type: ignore
         self._self_cancel_ctx = (token, span_ctx)
 
         return next_msg
-
-
-class SubscriptionCtxProxy(ObjectProxy):  # type: ignore
-    """Proxy object for subscription context manager."""
-
-    def __init__(self, wrapped: Any, tracer: Tracer) -> None:
-        super().__init__(wrapped)
-        self._self_tracer = tracer
-        self._self_sub = None
-
-    async def __aenter__(self) -> Any:
-        sub = await self.__wrapped__.__aenter__()
-        if isinstance(sub, IteratorSubscription):
-            sub = IterableSubscriptionProxy(sub, self._self_tracer)
-        self._self_sub = sub
-        return sub
-
-    def __aexit__(self, *args: Any, **kwargs: dict[Any, Any]) -> Any:
-        if self._self_sub and isinstance(self._self_sub, IterableSubscriptionProxy):
-            self._self_sub.__cancel_ctx__(*args, **kwargs)
 
 
 class NatsCoreInstrumentator:
@@ -104,7 +98,7 @@ class NatsCoreInstrumentator:
         unwrap(Nats, "publish")
 
     def _instrument_publish(self) -> None:
-        def _wrapped_publish(
+        async def _wrapped_publish(
             wrapper: Callable[..., Any],
             subject: str,
             payload: bytes | str | bytearray | memoryview,
@@ -113,22 +107,24 @@ class NatsCoreInstrumentator:
             **kwargs: dict[str, Any],
         ) -> Any:
             if not is_instrumentation_enabled():
-                return wrapper(
+                return await wrapper(
                     subject,
                     payload,
                     headers=headers,
                     **kwargs,
                 )
-            span = (
+            span_builder = (
                 SpanBuilder(self.tracer, SpanKind.PRODUCER, SpanAction.PUBLISH)
                 .with_subject(subject)
-                .with_payload(payload)
-                .build()
+                .with_payload(payload, capture_body=self.capture_body)
             )
             headers = headers or {}
+            if self.capture_headers:
+                span_builder = span_builder.with_headers(headers)
+            span = span_builder.build()
             with trace.use_span(span, end_on_exit=True):
                 propagate.inject(headers)
-                return wrapper(
+                return await wrapper(
                     subject,
                     payload,
                     headers=headers,
@@ -167,7 +163,11 @@ class NatsCoreInstrumentator:
                 token = context.attach(ctx)
                 span = (
                     SpanBuilder(self.tracer, SpanKind.CONSUMER, SpanAction.RECEIVE)
-                    .with_message(message)
+                    .with_message(
+                        message,
+                        capture_body=self.capture_body,
+                        capture_headers=self.capture_headers,
+                    )
                     .build()
                 )
                 try:
@@ -194,9 +194,12 @@ class NatsCoreInstrumentator:
             args: tuple[Any, ...],
             kwargs: dict[str, Any],
         ) -> AsyncGenerator[Any, None]:
-            return SubscriptionCtxProxy(
+            return AsyncCtxManagerProxy(
                 wrapper(*process_args(*args, **kwargs)),
+                {IteratorSubscription: IterableSubscriptionProxy},
                 self.tracer,
+                capture_headers=self.capture_headers,
+                capture_body=self.capture_body,
             )
 
         wrap_function_wrapper("natsrpy._natsrpy_rs", "Nats.subscribe", wrapper)

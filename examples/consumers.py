@@ -41,17 +41,30 @@ async def main() -> None:
     # We publish a single message
     await js.publish("stream.example.test", "message for stream")
 
-    # We use messages() to get async iterator which we
-    # use to get messages for push_consumer.
-    async for push_message in await push_consumer.messages():
-        print(f"[FROM_PUSH] {push_message.payload!r}")  # noqa: T201
-        await push_message.ack()
-        break
+    async with push_consumer.consume() as messages:
+        async for push_message in messages:
+            print(f"[FROM_PUSH] {push_message.payload!r}")  # noqa: T201
+            break
 
-    # Pull consumers have to request batches of messages.
+    # Pull consumers have 2 different APIs.
+    # 1. You can use fetch directly.
+    # 2. Use async iterator API.
+
+    # Here's how to call pull-consumer fetch method.
+    # It returns a batch of messages.
+    # However, please be careful, this method has worse opentelemetry
+    # instrumentation. Because essentailly it's the same as just calling a function.
+    # with no scope.
     for pull_message in await pull_consumer.fetch(max_messages=10):
         print(f"[FROM_PULL] {pull_message.payload!r}")  # noqa: T201
         await pull_message.ack()
+
+    # This API is more prefered, because it has better
+    # Opentelemetry instrumentation.
+    async with pull_consumer.consume() as messages:
+        async for message in messages:
+            print(f"[FROM_PULL] {message.payload!r}")  # noqa: T201
+            break
 
     # Cleanup
     await stream.consumers.delete(push_consumer.name)

@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use futures_util::StreamExt;
-use pyo3::{Bound, PyAny, Python};
+use pyo3::{Bound, PyAny, PyRef, Python};
 
 use crate::{
-    exceptions::rust_err::NatsrpyResult,
-    utils::{futures::natsrpy_future_with_timeout, py_types::TimeValue},
+    exceptions::rust_err::{NatsrpyError, NatsrpyResult},
+    js::pymod::JetStreamMessage,
+    utils::{
+        futures::natsrpy_future_with_timeout, natsrpy_future, py_types::TimeValue,
+        streamer::Streamer,
+    },
 };
 
 type NatsPullConsumer =
@@ -33,8 +37,98 @@ impl PullConsumer {
     }
 }
 
+#[pyo3::pyclass]
+pub struct PullConsumerFetcher {
+    pub consumer: Arc<NatsPullConsumer>,
+    pub messages: Arc<
+        tokio::sync::Mutex<
+            Streamer<
+                Result<
+                    async_nats::jetstream::Message,
+                    async_nats::jetstream::consumer::pull::MessagesError,
+                >,
+            >,
+        >,
+    >,
+}
+
+impl PullConsumerFetcher {
+    #[must_use]
+    pub fn new(
+        consumer: Arc<NatsPullConsumer>,
+        messages: async_nats::jetstream::consumer::pull::Stream,
+    ) -> Self {
+        Self {
+            consumer,
+            messages: Arc::new(tokio::sync::Mutex::new(Streamer::new(messages))),
+        }
+    }
+}
+
+#[pyo3::pymethods]
+impl PullConsumerFetcher {
+    #[must_use]
+    pub const fn __aiter__(slf: PyRef<Self>) -> PyRef<Self> {
+        slf
+    }
+
+    pub fn __anext__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx = self.messages.clone();
+        natsrpy_future(py, async move {
+            let value = ctx.lock().await.next().await;
+            match value {
+                Some(info) => JetStreamMessage::try_from(info?),
+                None => Err(NatsrpyError::AsyncStopIteration),
+            }
+        })
+    }
+}
+
+#[pyo3::pyclass]
+pub struct PullConsumerContextManager {
+    consumer: Arc<NatsPullConsumer>,
+}
+
+impl PullConsumerContextManager {
+    #[must_use]
+    pub const fn new(consumer: Arc<NatsPullConsumer>) -> Self {
+        Self { consumer }
+    }
+}
+
+#[pyo3::pymethods]
+impl PullConsumerContextManager {
+    pub fn __aenter__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let consumer = self.consumer.clone();
+        natsrpy_future(py, async move {
+            let messages = consumer.messages().await?;
+            Ok(PullConsumerFetcher::new(consumer, messages))
+        })
+    }
+
+    #[pyo3(signature=(
+        _exc_type=None,
+        _exc_val=None,
+        _exc_tb=None,
+    ))]
+    pub fn __aexit__<'py>(
+        &self,
+        py: Python<'py>,
+        _exc_type: Option<Bound<'py, PyAny>>,
+        _exc_val: Option<Bound<'py, PyAny>>,
+        _exc_tb: Option<Bound<'py, PyAny>>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        natsrpy_future(py, async move { Ok(()) })
+    }
+}
+
 #[pyo3::pymethods]
 impl PullConsumer {
+    #[must_use]
+    pub fn consume(&self) -> PullConsumerContextManager {
+        PullConsumerContextManager::new(self.consumer.clone())
+    }
+
     #[pyo3(signature=(
         max_messages=None,
         group=None,

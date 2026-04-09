@@ -35,6 +35,43 @@ impl PushConsumer {
 }
 
 #[pyo3::pyclass]
+pub struct PushConsumerContextManager {
+    context: Arc<NatsPushConsumer>,
+}
+
+impl PushConsumerContextManager {
+    #[must_use]
+    pub const fn new(context: Arc<NatsPushConsumer>) -> Self {
+        Self { context }
+    }
+}
+
+#[pyo3::pymethods]
+impl PushConsumerContextManager {
+    pub fn __aenter__<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let consumer = self.context.clone();
+        natsrpy_future(py, async move {
+            Ok(MessagesIterator::from(consumer.messages().await?))
+        })
+    }
+
+    #[pyo3(signature=(
+        _exc_type=None,
+        _exc_val=None,
+        _exc_tb=None,
+    ))]
+    pub fn __aexit__<'py>(
+        &self,
+        py: Python<'py>,
+        _exc_type: Option<Bound<'py, PyAny>>,
+        _exc_val: Option<Bound<'py, PyAny>>,
+        _exc_tb: Option<Bound<'py, PyAny>>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        natsrpy_future(py, async move { Ok(()) })
+    }
+}
+
+#[pyo3::pyclass]
 pub struct MessagesIterator {
     messages: Option<Arc<tokio::sync::Mutex<async_nats::jetstream::consumer::push::Messages>>>,
 }
@@ -49,11 +86,9 @@ impl From<async_nats::jetstream::consumer::push::Messages> for MessagesIterator 
 
 #[pyo3::pymethods]
 impl PushConsumer {
-    pub fn messages<'py>(&self, py: Python<'py>) -> NatsrpyResult<Bound<'py, PyAny>> {
-        let consumer = self.consumer.clone();
-        natsrpy_future(py, async move {
-            Ok(MessagesIterator::from(consumer.messages().await?))
-        })
+    #[must_use]
+    pub fn consume(&self) -> PushConsumerContextManager {
+        PushConsumerContextManager::new(self.consumer.clone())
     }
 
     #[must_use]

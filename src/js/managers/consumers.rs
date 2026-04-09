@@ -153,12 +153,6 @@ impl<'py> FromPyObject<'_, 'py> for ConsumerConfigs {
     }
 }
 
-#[pyo3::pyclass]
-pub enum Consumers {
-    Pull(consumers::pull::PullConsumer),
-    Push(consumers::push::PushConsumer),
-}
-
 #[pyo3::pymethods]
 impl ConsumersManager {
     pub fn create<'py>(

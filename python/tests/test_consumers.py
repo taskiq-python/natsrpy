@@ -263,10 +263,11 @@ async def test_push_consumer_messages(js: JetStream) -> None:
             name=f"consumer-{uuid.uuid4()}",
         )
         consumer = await stream.consumers.create(consumer_config)
-        msgs_iter = await consumer.messages()
-        for message in messages:
-            nats_msg = await asyncio.wait_for(anext(msgs_iter), timeout=0.5)
-            assert message == nats_msg.payload
+        async with consumer.consume() as consumer_messages:
+            for message in messages:
+                nats_msg = await asyncio.wait_for(anext(consumer_messages), timeout=0.5)
+                assert message == nats_msg.payload
+
     finally:
         await js.streams.delete(stream_name)
 

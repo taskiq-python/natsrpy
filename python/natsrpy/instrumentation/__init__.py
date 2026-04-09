@@ -33,10 +33,13 @@ API
 """
 
 import logging
+import os
 from collections.abc import Collection
 from importlib import metadata
 from typing import Any
 
+from .js_consumer import JSConsumerInstrumentation
+from .js_publish import JSPublishInstrumentation
 from .nats_core import NatsCoreInstrumentator
 
 try:
@@ -68,12 +71,42 @@ class NatsrpyInstrumentor(BaseInstrumentor):  # type: ignore
 
     def _instrument(self, **kwargs: Any) -> None:
         tracer_provider = kwargs.get("tracer_provider")
+        capture_body = (
+            os.environ.get(
+                "OTEL_PYTHON_NATSRPY_CAPTURE_BODY",
+                str(kwargs.get("capture_body", False)),
+            ).lower()
+            == "true"
+        )
+        capture_headers = (
+            os.environ.get(
+                "OTEL_PYTHON_NATSRPY_CAPTURE_HEADERS",
+                str(kwargs.get("capture_headers", False)),
+            ).lower()
+            == "true"
+        )
         tracer = trace.get_tracer(
             _INSTRUMENTATION_MODULE_NAME,
             metadata.version("natsrpy"),
             tracer_provider,
         )
-        NatsCoreInstrumentator(tracer).instrument()
+        NatsCoreInstrumentator(
+            tracer,
+            capture_body=capture_body,
+            capture_headers=capture_headers,
+        ).instrument()
+        JSConsumerInstrumentation(
+            tracer,
+            capture_body=capture_body,
+            capture_headers=capture_headers,
+        ).instrument()
+        JSPublishInstrumentation(
+            tracer,
+            capture_body=capture_body,
+            capture_headers=capture_headers,
+        ).instrument()
 
     def _uninstrument(self, **kwargs: Any) -> None:
         NatsCoreInstrumentator.uninstrument()
+        JSConsumerInstrumentation.uninstrument()
+        JSPublishInstrumentation.uninstrument()
