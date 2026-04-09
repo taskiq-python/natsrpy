@@ -48,3 +48,7 @@ async def test_jetstream_publish_with_headers(js: JetStream) -> None:
         await js.publish(subj, b"with-headers", headers={"x-test": "value"}, wait=True)
     finally:
         await js.streams.delete(stream_name)
+
+
+async def test_jetstream_has_counters_manager(js: JetStream) -> None:
+    assert js.counters is not None

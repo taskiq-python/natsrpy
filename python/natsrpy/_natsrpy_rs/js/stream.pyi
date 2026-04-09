@@ -132,8 +132,6 @@ class SubjectTransform:
     source: str
     destination: str
 
-    def __new__(cls, source: str, destination: str) -> Self: ...
-
 @final
 class Source:
     """Configuration for a stream source or mirror origin.
@@ -454,7 +452,7 @@ class StreamInfo:
     """
 
     config: StreamConfig
-    created: float
+    created: int
     state: StreamState
     cluster: ClusterInfo | None
     mirror: SourceInfo | None
