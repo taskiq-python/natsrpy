@@ -7,9 +7,13 @@ pub mod pymod {
     #[pymodule_export]
     use super::common::{AckPolicy, DeliverPolicy, PriorityPolicy, ReplayPolicy};
     #[pymodule_export]
-    pub use super::pull::{config::PullConsumerConfig, consumer::PullConsumer};
+    pub use super::pull::{
+        config::PullConsumerConfig, consumer::PullConsumer, consumer::PullConsumerContextManager,
+        consumer::PullConsumerFetcher,
+    };
     #[pymodule_export]
     pub use super::push::{
         config::PushConsumerConfig, consumer::MessagesIterator, consumer::PushConsumer,
+        consumer::PushConsumerContextManager,
     };
 }

@@ -92,3 +92,78 @@ async def test_nats_connection_failure() -> None:
     nats = Nats(addrs=["localhost:19999"])
     with pytest.raises(Exception):
         await nats.startup()
+
+
+async def test_nats_addr_property(nats_url: str) -> None:
+    nats = Nats(addrs=[nats_url])
+    assert nats.addr == [nats_url]
+
+
+async def test_nats_addr_default() -> None:
+    nats = Nats()
+    assert nats.addr == ["nats://localhost:4222"]
+
+
+async def test_nats_token_property() -> None:
+    nats = Nats(token="secret-token")  # noqa: S106
+    assert nats.token == "secret-token"  # noqa: S105
+
+
+async def test_nats_token_default() -> None:
+    nats = Nats()
+    assert nats.token is None
+
+
+async def test_nats_nkey_property() -> None:
+    nats = Nats()
+    assert nats.nkey is None
+
+
+async def test_nats_user_and_pass_property() -> None:
+    nats = Nats(user_and_pass=("user", "pass"))
+    assert nats.user_and_pass == ("user", "pass")
+
+
+async def test_nats_user_and_pass_default() -> None:
+    nats = Nats()
+    assert nats.user_and_pass is None
+
+
+async def test_nats_custom_inbox_prefix_property() -> None:
+    nats = Nats(custom_inbox_prefix="_custom")
+    assert nats.custom_inbox_prefix == "_custom"
+
+
+async def test_nats_custom_inbox_prefix_default() -> None:
+    nats = Nats()
+    assert nats.custom_inbox_prefix is None
+
+
+async def test_nats_read_buffer_capacity_property() -> None:
+    nats = Nats(read_buffer_capacity=1024)
+    assert nats.read_buffer_capacity == 1024
+
+
+async def test_nats_read_buffer_capacity_default() -> None:
+    nats = Nats()
+    assert nats.read_buffer_capacity == 65535
+
+
+async def test_nats_sender_capacity_property() -> None:
+    nats = Nats(sender_capacity=64)
+    assert nats.sender_capacity == 64
+
+
+async def test_nats_sender_capacity_default() -> None:
+    nats = Nats()
+    assert nats.sender_capacity == 128
+
+
+async def test_nats_max_reconnects_property() -> None:
+    nats = Nats(max_reconnects=5)
+    assert nats.max_reconnects == 5
+
+
+async def test_nats_max_reconnects_default() -> None:
+    nats = Nats()
+    assert nats.max_reconnects is None

@@ -1,5 +1,6 @@
 from asyncio import Future
 from datetime import timedelta
+from types import TracebackType
 from typing import final
 
 from natsrpy._natsrpy_rs.js import JetStreamMessage
@@ -12,8 +13,11 @@ __all__ = [
     "PriorityPolicy",
     "PullConsumer",
     "PullConsumerConfig",
+    "PullConsumerContextManager",
+    "PullConsumerFetcher",
     "PushConsumer",
     "PushConsumerConfig",
+    "PushConsumerContextManager",
     "ReplayPolicy",
 ]
 
@@ -284,6 +288,28 @@ class MessagesIterator:
     def __anext__(self) -> Future[JetStreamMessage]: ...
 
 @final
+class PushConsumerContextManager:
+    """
+    Context manager for consuming messages from push-based consumer.
+
+    This class is used to scope the message consumption.
+    Mostly used for opentelemetry support.
+    """
+
+    def __aenter__(self) -> Future[MessagesIterator]:
+        """Get an async iterator for consuming messages.
+
+        :return: an async iterator over JetStream messages.
+        """
+
+    def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None = None,
+        _exc_val: BaseException | None = None,
+        _exc_tb: TracebackType | None = None,
+    ) -> Future[None]: ...
+
+@final
 class PushConsumer:
     """A push-based JetStream consumer.
 
@@ -298,11 +324,26 @@ class PushConsumer:
     def stream_name(self) -> str:
         """Get stream name that this consumer attached to."""
 
-    def messages(self) -> Future[MessagesIterator]:
-        """Get an async iterator for consuming messages.
+    def consume(self) -> PushConsumerContextManager:
+        """Start consuming messages."""
 
-        :return: an async iterator over JetStream messages.
-        """
+@final
+class PullConsumerFetcher:
+    def __aiter__(self) -> Self:
+        """Returns this very object."""
+
+    def __anext__(self) -> Future[JetStreamMessage]:
+        """Get a next message from the stream."""
+
+@final
+class PullConsumerContextManager:
+    def __aenter__(self) -> Future[PullConsumerFetcher]: ...
+    def __aexit__(
+        self,
+        _exc_type: type[BaseException] | None = None,
+        _exc_val: BaseException | None = None,
+        _exc_tb: TracebackType | None = None,
+    ) -> Future[None]: ...
 
 @final
 class PullConsumer:
@@ -318,6 +359,9 @@ class PullConsumer:
     @property
     def stream_name(self) -> str:
         """Get stream name that this consumer attached to."""
+
+    def consume(self) -> PullConsumerContextManager:
+        """Start consuming messages."""
 
     def fetch(
         self,

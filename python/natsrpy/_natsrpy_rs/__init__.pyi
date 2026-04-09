@@ -102,7 +102,7 @@ class SubscriptionCtxManager(Generic[_T]):
         """
 
     def __aenter__(self) -> Future[_T]: ...
-    async def __aexit__(
+    def __aexit__(
         self,
         _exc_type: type[BaseException] | None = None,
         _exc_val: BaseException | None = None,

@@ -252,3 +252,63 @@ async def test_stream_state_after_publish(js: JetStream) -> None:
         assert info.state.bytes > 0
     finally:
         await js.streams.delete(name)
+
+
+async def test_stream_name_property(js: JetStream) -> None:
+    name = f"test-sname-{uuid.uuid4().hex[:8]}"
+    config = StreamConfig(name=name, subjects=[f"{name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        assert stream.name == name
+    finally:
+        await js.streams.delete(name)
+
+
+async def test_stream_info_created_field(js: JetStream) -> None:
+    name = f"test-screated-{uuid.uuid4().hex[:8]}"
+    config = StreamConfig(name=name, subjects=[f"{name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        info = await stream.get_info()
+        assert isinstance(info.created, (int, float))
+        assert info.created > 0
+    finally:
+        await js.streams.delete(name)
+
+
+async def test_stream_state_subjects_count(js: JetStream) -> None:
+    name = f"test-ssubj-{uuid.uuid4().hex[:8]}"
+    config = StreamConfig(name=name, subjects=[f"{name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        await js.publish(f"{name}.a", b"msg-a", wait=True)
+        await js.publish(f"{name}.b", b"msg-b", wait=True)
+        info = await stream.get_info()
+        assert info.state.subjects_count == 2
+    finally:
+        await js.streams.delete(name)
+
+
+async def test_stream_state_timestamps(js: JetStream) -> None:
+    name = f"test-sts-{uuid.uuid4().hex[:8]}"
+    subj = f"{name}.data"
+    config = StreamConfig(name=name, subjects=[f"{name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        await js.publish(subj, b"ts-msg", wait=True)
+        info = await stream.get_info()
+        assert info.state.first_timestamp >= 0
+        assert info.state.last_timestamp >= 0
+    finally:
+        await js.streams.delete(name)
+
+
+async def test_stream_state_consumer_count(js: JetStream) -> None:
+    name = f"test-scnt-{uuid.uuid4().hex[:8]}"
+    config = StreamConfig(name=name, subjects=[f"{name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        info = await stream.get_info()
+        assert info.state.consumer_count == 0
+    finally:
+        await js.streams.delete(name)

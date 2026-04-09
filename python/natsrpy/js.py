@@ -6,8 +6,11 @@ from ._natsrpy_rs.js.consumers import (
     PriorityPolicy,
     PullConsumer,
     PullConsumerConfig,
+    PullConsumerContextManager,
+    PullConsumerFetcher,
     PushConsumer,
     PushConsumerConfig,
+    PushConsumerContextManager,
     ReplayPolicy,
 )
 from ._natsrpy_rs.js.counters import CounterEntry, Counters, CountersConfig
@@ -85,8 +88,11 @@ __all__ = [
     "Publication",
     "PullConsumer",
     "PullConsumerConfig",
+    "PullConsumerContextManager",
+    "PullConsumerFetcher",
     "PushConsumer",
     "PushConsumerConfig",
+    "PushConsumerContextManager",
     "ReplayPolicy",
     "Republish",
     "RetentionPolicy",

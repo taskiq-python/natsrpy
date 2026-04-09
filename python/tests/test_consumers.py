@@ -263,10 +263,11 @@ async def test_push_consumer_messages(js: JetStream) -> None:
             name=f"consumer-{uuid.uuid4()}",
         )
         consumer = await stream.consumers.create(consumer_config)
-        msgs_iter = await consumer.messages()
-        for message in messages:
-            nats_msg = await asyncio.wait_for(anext(msgs_iter), timeout=0.5)
-            assert message == nats_msg.payload
+        async with consumer.consume() as consumer_messages:
+            for message in messages:
+                nats_msg = await asyncio.wait_for(anext(consumer_messages), timeout=0.5)
+                assert message == nats_msg.payload
+
     finally:
         await js.streams.delete(stream_name)
 
@@ -303,3 +304,43 @@ async def test_push_consumer_config_properties() -> None:
     assert config.description == "push test"
     assert config.ack_policy == AckPolicy.EXPLICIT
     assert config.deliver_policy == DeliverPolicy.NEW
+
+
+async def test_pull_consumer_consume_context_manager(js: JetStream) -> None:
+    stream_name = f"test-pullctx-{uuid.uuid4().hex[:8]}"
+    subj = f"{stream_name}.data"
+    config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        await js.publish(subj, b"consume-msg", wait=True)
+        consumer = await stream.consumers.create(
+            PullConsumerConfig(name=f"consumer-{uuid.uuid4().hex[:8]}"),
+        )
+        async with consumer.consume() as fetcher:
+            msg = await anext(fetcher)
+            assert msg.payload == b"consume-msg"
+            await msg.ack()
+    finally:
+        await js.streams.delete(stream_name)
+
+
+async def test_push_consumer_consume_context_manager(js: JetStream) -> None:
+    stream_name = f"test-pushctx-{uuid.uuid4().hex[:8]}"
+    subj = f"{stream_name}.data"
+    config = StreamConfig(name=stream_name, subjects=[f"{stream_name}.>"])
+    stream = await js.streams.create(config)
+    try:
+        await js.publish(subj, b"push-consume-msg", wait=True)
+        deliver_subj = uuid.uuid4().hex
+        consumer = await stream.consumers.create(
+            PushConsumerConfig(
+                deliver_subject=deliver_subj,
+                name=f"push-{uuid.uuid4().hex[:8]}",
+            ),
+        )
+        async with consumer.consume() as msgs:
+            msg = await anext(msgs)
+            assert msg.payload == b"push-consume-msg"
+            await msg.ack()
+    finally:
+        await js.streams.delete(stream_name)
