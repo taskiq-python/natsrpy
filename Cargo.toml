@@ -14,18 +14,18 @@ crate-type = ["cdylib"]
 name = "_natsrpy_rs"
 
 [dependencies]
-async-nats = "0.46"
+async-nats = "0.47"
 bytes = "1.11.1"
 futures-util = "0.3.32"
 log = "0.4.29"
 pyo3 = { version = "0.28", features = ["abi3", "experimental-inspect"] }
 pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"] }
-pyo3-log = "0.13.3"
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-thiserror = "2.0.18"
-time = "0.3.47"
-tokio = { version = "1.50.0", features = ["full"] }
+pyo3-log = "0.13"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+time = "0.3"
+tokio = { version = "1.51", features = ["full"] }
 
 [profile.dev]
 opt-level = 0
