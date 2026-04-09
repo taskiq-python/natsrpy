@@ -123,3 +123,14 @@ async def test_fullwild_subscription(nats: Nats) -> None:
         msg = await anext(sub)
         assert msg.payload == b"full-wild"
         assert msg.subject == f"{prefix}.a.b.c"
+
+
+async def test_subscription_ctx_manager_detatch(nats: Nats) -> None:
+    subj = uuid.uuid4().hex
+    ctx = nats.subscribe(subject=subj)
+    sub = await ctx.detatch()
+    assert isinstance(sub, IteratorSubscription)
+    await nats.publish(subj, b"detatch-test")
+    msg = await asyncio.wait_for(anext(sub), timeout=5.0)
+    assert msg.payload == b"detatch-test"
+    await sub.unsubscribe()

@@ -831,3 +831,41 @@ async def test_kv_operation_equality() -> None:
     assert KVOperation.Put != KVOperation.Delete
     assert KVOperation.Put != KVOperation.Purge
     assert KVOperation.Delete != KVOperation.Purge
+
+
+async def test_kv_entry_seen_current(js: JetStream) -> None:
+    bucket = f"test-kv-seen-{uuid.uuid4().hex[:8]}"
+    config = KVConfig(bucket=bucket)
+    kv = await js.kv.create(config)
+    try:
+        # Create watcher on empty bucket, then put — the received entry is a live update
+        watcher = await kv.watch_all()
+        await kv.put("mykey", b"value1")
+        entry = await asyncio.wait_for(anext(watcher), timeout=5.0)
+        assert isinstance(entry.seen_current, bool)
+        # First live update on an empty bucket is marked as seen_current
+        assert entry.seen_current is True
+    finally:
+        await js.kv.delete(bucket)
+
+
+async def test_kv_config_max_age_timedelta(js: JetStream) -> None:
+    bucket = f"test-kv-maxage-{uuid.uuid4().hex[:8]}"
+    max_age = timedelta(hours=1)
+    config = KVConfig(bucket=bucket, max_age=max_age)
+    assert config.max_age == max_age
+    kv = await js.kv.create(config)
+    try:
+        assert kv is not None
+    finally:
+        await js.kv.delete(bucket)
+
+
+async def test_kv_config_description_none() -> None:
+    config = KVConfig(bucket="test-desc-none")
+    assert config.description is None
+
+
+async def test_kv_config_description_set() -> None:
+    config = KVConfig(bucket="test-desc-set", description="my description")
+    assert config.description == "my description"
