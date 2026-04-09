@@ -47,13 +47,18 @@ async fn start_py_sub(
     mut unsub_receiver: tokio::sync::mpsc::Receiver<UnsubscribeCommand>,
     end_event: AsyncEvent,
 ) {
+    // Required to wait for completion of processing tasks.
+    //
+    // This will ensure that end_event is only set after
+    // processing of all messages is finished.
+    let mut tasks = tokio::task::JoinSet::new();
     loop {
         tokio::select! {
             msg = sub.next() => {
                 match msg {
                     Some(message) => {
                         let py_cb = py_callback.clone();
-                        tokio::spawn(pyo3_async_runtimes::tokio::scope(
+                        tasks.spawn(pyo3_async_runtimes::tokio::scope(
                             locals.clone(),
                             process_message(message, py_cb),
                         ));
@@ -77,6 +82,7 @@ async fn start_py_sub(
             }
         }
     }
+    tasks.join_all().await;
     end_event.set();
 }
 
