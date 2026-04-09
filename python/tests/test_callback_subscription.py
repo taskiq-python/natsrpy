@@ -52,7 +52,7 @@ async def test_callback_wait_method(nats: Nats) -> None:
     limit = 10
 
     async def callback(msg: Message) -> None:
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.1)
         received.append(msg.payload)
 
     async with nats.subscribe(subject=subj, callback=callback) as sub:
