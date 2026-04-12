@@ -30,6 +30,17 @@ class SpanAction(enum.Enum):
     PROGRESS = "progress"
     TERM = "term"
     NEXT = "next"
+    # KeyValue operations
+    GET = "get"
+    PUT = "put"
+    CREATE = "create"
+    UPDATE = "update"
+    DELETE = "delete"
+    PURGE = "purge"
+    WATCH = "watch"
+    KEYS = "keys"
+    HISTORY = "history"
+    ENTRY = "entry"
 
 
 class SpanBuilder:
@@ -98,6 +109,24 @@ class SpanBuilder:
         )
         if capture_headers:
             self.with_headers(msg.headers)
+        return self
+
+    def with_kv_bucket(self, bucket: str) -> Self:
+        """Set key-value bucket name."""
+        self.attributes[MESSAGING_DESTINATION_NAME] = bucket
+        self.attributes["nats.kv.bucket"] = bucket
+        return self
+
+    def with_kv_key(self, key: str) -> Self:
+        """Set key-value entry key."""
+        self.attributes["nats.kv.key"] = key
+        return self
+
+    def with_kv_value(self, value: bytes | str, capture_body: bool = False) -> Self:
+        """Set key-value entry value attributes."""
+        self.attributes[MESSAGING_MESSAGE_BODY_SIZE] = len(value)
+        if capture_body:
+            self.attributes["nats.kv.value"] = value
         return self
 
     def with_links(self, links: Sequence[Link]) -> Self:

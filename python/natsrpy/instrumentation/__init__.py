@@ -40,6 +40,7 @@ from typing import Any
 
 from .js_consumer import JSConsumerInstrumentation
 from .js_publish import JSPublishInstrumentation
+from .kv import KVInstrumentation
 from .nats_core import NatsCoreInstrumentator
 
 try:
@@ -105,8 +106,13 @@ class NatsrpyInstrumentor(BaseInstrumentor):  # type: ignore
             capture_body=capture_body,
             capture_headers=capture_headers,
         ).instrument()
+        KVInstrumentation(
+            tracer,
+            capture_body=capture_body,
+        ).instrument()
 
     def _uninstrument(self, **kwargs: Any) -> None:
         NatsCoreInstrumentator.uninstrument()
         JSConsumerInstrumentation.uninstrument()
         JSPublishInstrumentation.uninstrument()
+        KVInstrumentation.uninstrument()
