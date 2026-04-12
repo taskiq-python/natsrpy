@@ -107,7 +107,7 @@ class KVInstrumentation:
             key: str = args[0]
             value: bytes | str = args[1]
             span = (
-                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.PUT)
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.KV_PUT)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .with_kv_value(value, capture_body=capture_body)
@@ -141,7 +141,7 @@ class KVInstrumentation:
             key: str = args[0]
             value: bytes | str = args[1]
             span = (
-                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.CREATE)
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.KV_CREATE)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .with_kv_value(value, capture_body=capture_body)
@@ -175,7 +175,7 @@ class KVInstrumentation:
             key: str = args[0]
             value: bytes | str = args[1]
             span = (
-                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.UPDATE)
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.KV_UPDATE)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .with_kv_value(value, capture_body=capture_body)
@@ -207,7 +207,7 @@ class KVInstrumentation:
                 return await wrapper(*args, **kwargs)
             key: str = args[0]
             span = (
-                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.DELETE)
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.KV_DELETE)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .build()
@@ -238,7 +238,7 @@ class KVInstrumentation:
                 return await wrapper(*args, **kwargs)
             key: str = args[0]
             span = (
-                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.PURGE)
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.KV_PURGE)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .build()
@@ -269,7 +269,7 @@ class KVInstrumentation:
                 return await wrapper(*args, **kwargs)
             key: str = args[0]
             span = (
-                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.GET)
+                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.KV_GET)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .build()
@@ -300,7 +300,7 @@ class KVInstrumentation:
                 return await wrapper(*args, **kwargs)
             key: str = args[0]
             span = (
-                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.ENTRY)
+                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.KV_ENTRY)
                 .with_kv_bucket(instance.name)
                 .with_kv_key(key)
                 .build()
@@ -395,7 +395,7 @@ class KVInstrumentation:
             if not is_instrumentation_enabled():
                 return await wrapper(*args, **kwargs)
             span = (
-                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.KEYS)
+                SpanBuilder(tracer, SpanKind.CLIENT, SpanAction.KV_KEYS)
                 .with_kv_bucket(instance.name)
                 .build()
             )

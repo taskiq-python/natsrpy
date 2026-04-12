@@ -31,16 +31,26 @@ class SpanAction(enum.Enum):
     TERM = "term"
     NEXT = "next"
     # KeyValue operations
-    GET = "get"
-    PUT = "put"
-    CREATE = "create"
-    UPDATE = "update"
-    DELETE = "delete"
-    PURGE = "purge"
-    WATCH = "watch"
-    KEYS = "keys"
-    HISTORY = "history"
-    ENTRY = "entry"
+    KV_GET = "kv.get"
+    KV_PUT = "kv.put"
+    KV_CREATE = "kv.create"
+    KV_UPDATE = "kv.update"
+    KV_DELETE = "kv.delete"
+    KV_PURGE = "kv.purge"
+    KV_WATCH = "kv.watch"
+    KV_KEYS = "kv.keys"
+    KV_HISTORY = "kv.history"
+    KV_ENTRY = "kv.entry"
+    # ObjectStore operations
+    OBJ_PUT = "obj.put"
+    OBJ_GET = "obj.get"
+    OBJ_DELETE = "obj.delete"
+    OBJ_SEAL = "obj.seal"
+    OBJ_INFO = "obj.info"
+    OBJ_WATCH = "obj.watch"
+    OBJ_LIST = "obj.list"
+    OBJ_LINK = "obj.link"
+    OBJ_UPDATE_METADATA = "obj.update_metadata"
 
 
 class SpanBuilder:
@@ -127,6 +137,17 @@ class SpanBuilder:
         self.attributes[MESSAGING_MESSAGE_BODY_SIZE] = len(value)
         if capture_body:
             self.attributes["nats.kv.value"] = value
+        return self
+
+    def with_object_name(self, name: str) -> Self:
+        """Set object store object name."""
+        self.attributes[MESSAGING_DESTINATION_NAME] = name
+        self.attributes["nats.object_store.name"] = name
+        return self
+
+    def with_object_size(self, size: int) -> Self:
+        """Set object size in bytes."""
+        self.attributes[MESSAGING_MESSAGE_BODY_SIZE] = size
         return self
 
     def with_links(self, links: Sequence[Link]) -> Self:
