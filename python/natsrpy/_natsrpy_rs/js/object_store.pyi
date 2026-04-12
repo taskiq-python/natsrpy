@@ -1,5 +1,6 @@
 from asyncio import Future
 from datetime import datetime, timedelta
+from os import PathLike
 from typing import Any, final
 
 from typing_extensions import Self, Writer
@@ -130,18 +131,38 @@ class ObjectStore:
     def put(
         self,
         name: str,
-        value: bytes | str,
+        value: bytes | bytearray | memoryview,
         chunk_size: int = ...,  # 24MB
         description: str | None = None,
         headers: dict[str, str | list[str]] | None = None,
         metadata: dict[str, str] | None = None,
     ) -> Future[None]:
-        """Upload an object to the store.
+        """Upload an object to the store from in-memory bytes.
 
         :param name: name for the stored object.
-        :param value: object content.
+        :param value: object content as bytes.
         :param chunk_size: size of upload chunks in bytes,
             defaults to 24 MB.
+        :param description: human-readable object description.
+        :param headers: optional NATS headers.
+        :param metadata: optional custom key-value metadata.
+        """
+
+    def put_file(
+        self,
+        name: str,
+        path: str | PathLike[str],
+        chunk_size: int | None = None,
+        description: str | None = None,
+        headers: dict[str, str | list[str]] | None = None,
+        metadata: dict[str, str] | None = None,
+    ) -> Future[None]:
+        """Upload an object to the store by streaming from a file.
+
+        :param name: name for the stored object.
+        :param path: path to the file to upload.
+        :param chunk_size: size of read and upload chunks in bytes,
+            defaults to 200 KB.
         :param description: human-readable object description.
         :param headers: optional NATS headers.
         :param metadata: optional custom key-value metadata.

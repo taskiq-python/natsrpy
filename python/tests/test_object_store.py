@@ -511,7 +511,7 @@ async def test_object_store_put_with_metadata(js: JetStream) -> None:
         await js.object_store.delete(bucket)
 
 
-async def test_object_store_put_from_file(js: JetStream) -> None:
+async def test_object_store_put_file_str_path(js: JetStream) -> None:
     bucket = f"test-os-putfile-{uuid.uuid4().hex[:8]}"
     config = ObjectStoreConfig(bucket=bucket)
     store = await js.object_store.create(config)
@@ -522,12 +522,33 @@ async def test_object_store_put_from_file(js: JetStream) -> None:
             tmp_path = tmp.name
 
         try:
-            await store.put("file-object", tmp_path)
+            await store.put_file("file-object", tmp_path)
             writer = io.BytesIO()
             await store.get("file-object", writer)
             assert writer.getvalue() == file_content
         finally:
             Path(tmp_path).unlink()
+    finally:
+        await js.object_store.delete(bucket)
+
+
+async def test_object_store_put_file_path_object(js: JetStream) -> None:
+    bucket = f"test-os-putfilepath-{uuid.uuid4().hex[:8]}"
+    config = ObjectStoreConfig(bucket=bucket)
+    store = await js.object_store.create(config)
+    try:
+        file_content = b"file content via pathlib"
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(file_content)
+            tmp_path = Path(tmp.name)
+
+        try:
+            await store.put_file("file-object", tmp_path)
+            writer = io.BytesIO()
+            await store.get("file-object", writer)
+            assert writer.getvalue() == file_content
+        finally:
+            tmp_path.unlink()
     finally:
         await js.object_store.delete(bucket)
 

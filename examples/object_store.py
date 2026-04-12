@@ -21,7 +21,7 @@ async def main() -> None:
         ),
     )
     await store.put("test2.py", Path(__file__).read_bytes())
-    await store.put("test.py", str(Path(__file__)))
+    await store.put_file("test.py", Path(__file__))
 
     async for obj in await store.list():
         print(obj)  # noqa: T201

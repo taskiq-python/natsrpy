@@ -56,6 +56,7 @@ class ObjectStoreInstrumentation:
     def instrument(self) -> None:
         """Setup instrumentation for all ObjectStore methods."""
         self._instrument_put()
+        self._instrument_put_file()
         self._instrument_get()
         self._instrument_delete()
         self._instrument_seal()
@@ -71,6 +72,7 @@ class ObjectStoreInstrumentation:
         """Remove instrumentation from all ObjectStore methods."""
         for method in (
             "put",
+            "put_file",
             "get",
             "delete",
             "seal",
@@ -116,6 +118,35 @@ class ObjectStoreInstrumentation:
             return _wrapped(wrapper, args, kwargs)
 
         wrap_function_wrapper(_OS_MODULE, "ObjectStore.put", decorator)
+
+    def _instrument_put_file(self) -> None:
+        tracer = self.tracer
+
+        async def _wrapped(
+            wrapper: Any,
+            args: tuple[Any, ...],
+            kwargs: dict[str, Any],
+        ) -> Any:
+            if not is_instrumentation_enabled():
+                return await wrapper(*args, **kwargs)
+            name: str = args[0]
+            span = (
+                SpanBuilder(tracer, SpanKind.PRODUCER, SpanAction.OBJ_PUT)
+                .with_object_name(name)
+                .build()
+            )
+            with trace.use_span(span, end_on_exit=True):
+                return await wrapper(*args, **kwargs)
+
+        def decorator(
+            wrapper: Any,
+            _: ObjectStore,
+            args: tuple[Any, ...],
+            kwargs: dict[str, Any],
+        ) -> Any:
+            return _wrapped(wrapper, args, kwargs)
+
+        wrap_function_wrapper(_OS_MODULE, "ObjectStore.put_file", decorator)
 
     def _instrument_get(self) -> None:
         tracer = self.tracer

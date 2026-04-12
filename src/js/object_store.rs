@@ -17,7 +17,7 @@ use crate::{
     utils::{
         headers::NatsrpyHeadermapExt,
         natsrpy_future,
-        py_types::{SendableValue, TimeValue, ToPyDate},
+        py_types::{TimeValue, ToPyDate},
         streamer::Streamer,
     },
 };
@@ -253,7 +253,7 @@ impl ObjectStore {
         &self,
         py: Python<'py>,
         name: String,
-        value: SendableValue,
+        value: Vec<u8>,
         chunk_size: Option<usize>,
         description: Option<String>,
         headers: Option<Bound<'py, PyDict>>,
@@ -269,19 +269,45 @@ impl ObjectStore {
             headers,
         };
         natsrpy_future(py, async move {
-            match value {
-                SendableValue::Bytes(data) => {
-                    let mut reader = tokio::io::BufReader::new(&*data);
-                    ctx_guard.read().await.put(meta, &mut reader).await?;
-                }
-                SendableValue::String(filename) => {
-                    let mut reader = tokio::io::BufReader::with_capacity(
-                        chunk_size.unwrap_or(200 * 1024),
-                        tokio::fs::File::open(filename).await?,
-                    );
-                    ctx_guard.read().await.put(meta, &mut reader).await?;
-                }
-            }
+            let mut reader = tokio::io::BufReader::new(value.as_slice());
+            ctx_guard.read().await.put(meta, &mut reader).await?;
+            Ok(())
+        })
+    }
+
+    #[pyo3(signature=(
+        name,
+        path,
+        chunk_size=None,
+        description=None,
+        headers=None,
+        metadata=None,
+    ))]
+    pub fn put_file<'py>(
+        &self,
+        py: Python<'py>,
+        name: String,
+        path: std::path::PathBuf,
+        chunk_size: Option<usize>,
+        description: Option<String>,
+        headers: Option<Bound<'py, PyDict>>,
+        metadata: Option<HashMap<String, String>>,
+    ) -> NatsrpyResult<Bound<'py, PyAny>> {
+        let ctx_guard = self.object_store.clone();
+        let headers = headers.map(|val| HeaderMap::from_pydict(val)).transpose()?;
+        let meta = async_nats::jetstream::object_store::ObjectMetadata {
+            name,
+            chunk_size,
+            description,
+            metadata: metadata.unwrap_or_default(),
+            headers,
+        };
+        natsrpy_future(py, async move {
+            let mut reader = tokio::io::BufReader::with_capacity(
+                chunk_size.unwrap_or(200 * 1024),
+                tokio::fs::File::open(path).await?,
+            );
+            ctx_guard.read().await.put(meta, &mut reader).await?;
             Ok(())
         })
     }
