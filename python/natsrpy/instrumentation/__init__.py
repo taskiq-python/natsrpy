@@ -40,7 +40,9 @@ from typing import Any
 
 from .js_consumer import JSConsumerInstrumentation
 from .js_publish import JSPublishInstrumentation
+from .kv import KVInstrumentation
 from .nats_core import NatsCoreInstrumentator
+from .object_store import ObjectStoreInstrumentation
 
 try:
     import opentelemetry  # noqa: F401
@@ -105,8 +107,18 @@ class NatsrpyInstrumentor(BaseInstrumentor):  # type: ignore
             capture_body=capture_body,
             capture_headers=capture_headers,
         ).instrument()
+        KVInstrumentation(
+            tracer,
+            capture_body=capture_body,
+        ).instrument()
+        ObjectStoreInstrumentation(
+            tracer,
+            capture_body=capture_body,
+        ).instrument()
 
     def _uninstrument(self, **kwargs: Any) -> None:
         NatsCoreInstrumentator.uninstrument()
         JSConsumerInstrumentation.uninstrument()
         JSPublishInstrumentation.uninstrument()
+        KVInstrumentation.uninstrument()
+        ObjectStoreInstrumentation.uninstrument()
