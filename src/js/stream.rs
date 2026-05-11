@@ -291,6 +291,31 @@ impl From<async_nats::jetstream::stream::SubjectTransform> for SubjectTransform 
 
 #[pyo3::pyclass(from_py_object, get_all, set_all)]
 #[derive(Debug, Clone)]
+pub struct StreamConsumerSource {
+    pub name: String,
+    pub deliver_subject: String,
+}
+
+impl From<StreamConsumerSource> for async_nats::jetstream::stream::StreamConsumerSource {
+    fn from(value: StreamConsumerSource) -> Self {
+        Self {
+            name: value.name,
+            deliver_subject: value.deliver_subject,
+        }
+    }
+}
+
+impl From<async_nats::jetstream::stream::StreamConsumerSource> for StreamConsumerSource {
+    fn from(value: async_nats::jetstream::stream::StreamConsumerSource) -> Self {
+        Self {
+            name: value.name.clone(),
+            deliver_subject: value.deliver_subject,
+        }
+    }
+}
+
+#[pyo3::pyclass(from_py_object, get_all, set_all)]
+#[derive(Debug, Clone)]
 pub struct Source {
     pub name: String,
     pub filter_subject: Option<String>,
@@ -299,6 +324,7 @@ pub struct Source {
     pub start_time: Option<i64>,
     pub domain: Option<String>,
     pub subject_transforms: Vec<SubjectTransform>,
+    pub consumer: Option<StreamConsumerSource>,
 }
 
 impl TryFrom<Source> for async_nats::jetstream::stream::Source {
@@ -320,6 +346,7 @@ impl TryFrom<Source> for async_nats::jetstream::stream::Source {
                 .into_iter()
                 .map(std::convert::Into::into)
                 .collect(),
+            consumer: value.consumer.map(Into::into),
         })
     }
 }
@@ -338,6 +365,7 @@ impl From<async_nats::jetstream::stream::Source> for Source {
                 .into_iter()
                 .map(Into::into)
                 .collect(),
+            consumer: value.consumer.map(Into::into),
         }
     }
 }
@@ -352,7 +380,8 @@ impl Source {
         start_sequence = None,
         start_time=None,
         domain=None,
-        subject_transforms = None
+        subject_transforms = None,
+        consumer = None,
     ))]
     pub fn __new__(
         name: String,
@@ -362,6 +391,7 @@ impl Source {
         start_time: Option<i64>,
         domain: Option<String>,
         subject_transforms: Option<Vec<Bound<'_, SubjectTransform>>>,
+        consumer: Option<StreamConsumerSource>,
     ) -> NatsrpyResult<Self> {
         Ok(Self {
             name,
@@ -375,6 +405,7 @@ impl Source {
                 .map(|val| val.borrow().deref().clone())
                 .collect(),
             external: external.map(|e| e.borrow().deref().clone()),
+            consumer,
         })
     }
 }
@@ -538,6 +569,7 @@ pub struct StreamConfig {
     pub allow_atomic_publish: bool,
     pub allow_message_schedules: bool,
     pub allow_message_counter: bool,
+    pub allow_batch_publish: bool,
 }
 
 #[pyo3::pymethods]
@@ -583,6 +615,7 @@ impl StreamConfig {
         allow_atomic_publish=None,
         allow_message_schedules=None,
         allow_message_counter=None,
+        allow_batch_publish=None,
     ))]
     pub fn __new__(
         name: String,
@@ -624,6 +657,7 @@ impl StreamConfig {
         allow_atomic_publish: Option<bool>,
         allow_message_schedules: Option<bool>,
         allow_message_counter: Option<bool>,
+        allow_batch_publish: Option<bool>,
     ) -> NatsrpyResult<Self> {
         let config = Self {
             name,
@@ -666,6 +700,7 @@ impl StreamConfig {
             allow_atomic_publish: allow_atomic_publish.unwrap_or_default(),
             allow_message_schedules: allow_message_schedules.unwrap_or_default(),
             allow_message_counter: allow_message_counter.unwrap_or_default(),
+            allow_batch_publish: allow_batch_publish.unwrap_or_default(),
         };
 
         Ok(config)
@@ -718,6 +753,7 @@ impl TryFrom<async_nats::jetstream::stream::Config> for StreamConfig {
             allow_atomic_publish: value.allow_atomic_publish,
             allow_message_schedules: value.allow_message_schedules,
             allow_message_counter: value.allow_message_counter,
+            allow_batch_publish: value.allow_batch_publish,
         })
     }
 }
@@ -726,65 +762,65 @@ impl TryFrom<StreamConfig> for async_nats::jetstream::stream::Config {
     type Error = NatsrpyError;
 
     fn try_from(value: StreamConfig) -> Result<Self, Self::Error> {
-        let mut conf = Self {
+        let conf = Self {
             name: value.name,
             subjects: value.subjects,
             description: value.description,
             first_sequence: value.first_sequence,
             subject_delete_marker_ttl: value.subject_delete_marker_ttl,
-            ..Default::default()
+
+            // Optional values that have defaults.
+            // If the value is not present, we just use the one
+            // that nats' config defaults to.
+            max_bytes: value.max_bytes,
+            max_messages: value.max_messages,
+            max_messages_per_subject: value.max_messages_per_subject,
+            discard_new_per_subject: value.discard_new_per_subject,
+            max_consumers: value.max_consumers,
+            max_age: value.max_age,
+            max_message_size: value.max_message_size,
+            num_replicas: value.num_replicas,
+            no_ack: value.no_ack,
+            duplicate_window: value.duplicate_window,
+            template_owner: value.template_owner,
+            sealed: value.sealed,
+            allow_rollup: value.allow_rollup,
+            deny_delete: value.deny_delete,
+            deny_purge: value.deny_purge,
+            allow_direct: value.allow_direct,
+            mirror_direct: value.mirror_direct,
+            metadata: value.metadata,
+            allow_message_ttl: value.allow_message_ttl,
+            allow_atomic_publish: value.allow_atomic_publish,
+            allow_message_schedules: value.allow_message_schedules,
+            allow_message_counter: value.allow_message_counter,
+            allow_batch_publish: value.allow_batch_publish,
+
+            // Values that require conversion between python -> rust types.
+            republish: value.republish.map(Into::into),
+            storage: value.storage.into(),
+            retention: value.retention.into(),
+            discard: value.discard.into(),
+            mirror: value.mirror.map(TryInto::try_into).transpose()?,
+            sources: value
+                .sources
+                .map(|sources| {
+                    sources
+                        .into_iter()
+                        .map(TryInto::try_into)
+                        .collect::<Result<Vec<_>, _>>()
+                })
+                .transpose()?,
+            subject_transform: value.subject_transform.map(Into::into),
+            compression: value.compression.map(Into::into),
+            consumer_limits: value.consumer_limits.map(Into::into),
+            placement: value.placement.map(Into::into),
+            persist_mode: value.persist_mode.map(Into::into),
+            pause_until: value
+                .pause_until
+                .map(time::OffsetDateTime::from_unix_timestamp)
+                .transpose()?,
         };
-
-        // Optional values that have defaults.
-        // If the value is not present, we just use the one
-        // that nats' config defaults to.
-        conf.max_bytes = value.max_bytes;
-        conf.max_messages = value.max_messages;
-        conf.max_messages_per_subject = value.max_messages_per_subject;
-        conf.discard_new_per_subject = value.discard_new_per_subject;
-        conf.max_consumers = value.max_consumers;
-        conf.max_age = value.max_age;
-        conf.max_message_size = value.max_message_size;
-        conf.num_replicas = value.num_replicas;
-        conf.no_ack = value.no_ack;
-        conf.duplicate_window = value.duplicate_window;
-        conf.template_owner = value.template_owner;
-        conf.sealed = value.sealed;
-        conf.allow_rollup = value.allow_rollup;
-        conf.deny_delete = value.deny_delete;
-        conf.deny_purge = value.deny_purge;
-        conf.allow_direct = value.allow_direct;
-        conf.mirror_direct = value.mirror_direct;
-        conf.metadata = value.metadata;
-        conf.allow_message_ttl = value.allow_message_ttl;
-        conf.allow_atomic_publish = value.allow_atomic_publish;
-        conf.allow_message_schedules = value.allow_message_schedules;
-        conf.allow_message_counter = value.allow_message_counter;
-
-        // Values that require conversion between python -> rust types.
-        conf.republish = value.republish.map(Into::into);
-        conf.storage = value.storage.into();
-        conf.retention = value.retention.into();
-        conf.discard = value.discard.into();
-        conf.mirror = value.mirror.map(TryInto::try_into).transpose()?;
-        conf.sources = value
-            .sources
-            .map(|sources| {
-                sources
-                    .into_iter()
-                    .map(TryInto::try_into)
-                    .collect::<Result<Vec<_>, _>>()
-            })
-            .transpose()?;
-        conf.subject_transform = value.subject_transform.map(Into::into);
-        conf.compression = value.compression.map(Into::into);
-        conf.consumer_limits = value.consumer_limits.map(Into::into);
-        conf.placement = value.placement.map(Into::into);
-        conf.persist_mode = value.persist_mode.map(Into::into);
-        conf.pause_until = value
-            .pause_until
-            .map(time::OffsetDateTime::from_unix_timestamp)
-            .transpose()?;
 
         Ok(conf)
     }
@@ -1109,6 +1145,7 @@ pub mod pymod {
     pub use super::{
         ClusterInfo, Compression, ConsumerLimits, DiscardPolicy, External, PeerInfo,
         PersistenceMode, Placement, Republish, RetentionPolicy, Source, SourceInfo, StorageType,
-        Stream, StreamConfig, StreamInfo, StreamMessage, StreamState, SubjectTransform,
+        Stream, StreamConfig, StreamConsumerSource, StreamInfo, StreamMessage, StreamState,
+        SubjectTransform,
     };
 }

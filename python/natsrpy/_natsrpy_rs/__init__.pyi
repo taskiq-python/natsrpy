@@ -208,7 +208,7 @@ class Nats:
     def request(
         self,
         subject: str,
-        payload: bytes | str | bytearray | memoryview,
+        payload: bytes | str | bytearray | memoryview | None = None,
         *,
         headers: dict[str, Any] | None = None,
         inbox: str | None = None,
