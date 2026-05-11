@@ -14,7 +14,7 @@ crate-type = ["cdylib"]
 name = "_natsrpy_rs"
 
 [dependencies]
-async-nats = "0.47"
+async-nats = "0.48"
 bytes = "1.11.1"
 futures-util = "0.3.32"
 log = "0.4.29"

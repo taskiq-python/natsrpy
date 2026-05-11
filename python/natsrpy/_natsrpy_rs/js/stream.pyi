@@ -133,6 +133,17 @@ class SubjectTransform:
     destination: str
 
 @final
+class StreamConsumerSource:
+    """
+    Configures a pre-created durable consumer.
+
+    Used for stream mirroring. See ADR-60.
+    """
+
+    name: str
+    deliver_subject: str
+
+@final
 class Source:
     """Configuration for a stream source or mirror origin.
 
@@ -144,6 +155,7 @@ class Source:
         start_time: optional starting timestamp.
         domain: optional JetStream domain.
         subject_transforms: optional subject transformation rule.
+        consumer: pre-created durable consumer to use for sourcing. See ADR-60.
     """
 
     name: str
@@ -153,6 +165,7 @@ class Source:
     start_time: int | None = None
     domain: str | None = None
     subject_transforms: SubjectTransform | None = None
+    consumer: StreamConsumerSource | None = None
 
     def __new__(
         cls,
@@ -163,6 +176,7 @@ class Source:
         start_time: int | None = None,
         domain: str | None = None,
         subject_transforms: SubjectTransform | None = None,
+        consumer: StreamConsumerSource | None = None,
     ) -> Self: ...
 
 @final
@@ -247,6 +261,7 @@ class StreamConfig:
         allow_message_schedules: when True, enable scheduled message
             delivery.
         allow_message_counter: when True, enable message counter header.
+        allow_batch_publish: Allows fast-ingest batch publishing on the stream (ADR-50).
     """
 
     name: str
@@ -288,6 +303,7 @@ class StreamConfig:
     allow_atomic_publish: bool | None
     allow_message_schedules: bool | None
     allow_message_counter: bool | None
+    allow_batch_publish: bool
 
     def __new__(
         cls,
@@ -330,6 +346,7 @@ class StreamConfig:
         allow_atomic_publish: bool | None = None,
         allow_message_schedules: bool | None = None,
         allow_message_counter: bool | None = None,
+        allow_batch_publish: bool | None = None,
     ) -> Self: ...
 
 @final

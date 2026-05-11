@@ -175,7 +175,7 @@ impl NatsCls {
         })
     }
 
-    #[pyo3(signature = (subject, payload, *, headers=None, inbox = None, timeout=None))]
+    #[pyo3(signature = (subject, payload = None, *,  headers=None, inbox = None, timeout=None))]
     pub fn request<'py>(
         &self,
         py: Python<'py>,
