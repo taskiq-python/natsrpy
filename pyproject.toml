@@ -14,7 +14,6 @@ classifiers = [
   "Topic :: System :: Networking",
 ]
 dependencies = [
-  "maturin-import-hook>=0.3.0",
   "typing-extensions>=4.14.0",
 ]
 dynamic = ["version"]
@@ -37,6 +36,7 @@ opentelemetry = [
 dev = [
   "anyio>=4,<5",
   "maturin>=1,<2",
+  "maturin-import-hook>=0.3.0",
   "mypy>=1.19.1,<2",
   "pre-commit>=4.5.1,<5",
   "pytest>=9,<10",
@@ -47,6 +47,12 @@ dev = [
 [build-system]
 requires = ["maturin>=1.12,<2.0"]
 build-backend = "maturin"
+
+[tool.coverage.run]
+omit = [
+  "python/tests/**/*",
+  "python/natsrpy/instrumentation/**/*",
+]
 
 [tool.maturin]
 bindings = "pyo3"
@@ -67,12 +73,6 @@ warn_return_any = false
 
 [tool.pytest]
 anyio_mode = "auto"
-
-[tool.coverage.run]
-omit = [
-	"python/tests/**/*",
-	"python/natsrpy/instrumentation/**/*",
-]
 
 [tool.ruff]
 target-version = "py310"

@@ -24,7 +24,7 @@ pub struct CallbackSubscription {
 
 async fn process_message(message: async_nats::message::Message, py_callback: Arc<Py<PyAny>>) {
     let task = async || -> NatsrpyResult<()> {
-        log::debug!("Received message: {:?}. Processing ...", &message);
+        log::debug!("Received message: {message:?}. Processing ...");
         let awaitable = Python::attach(|gil| -> NatsrpyResult<_> {
             let message = crate::message::Message::from_nats_message(gil, &message)?;
             let res = py_callback.call1(gil, (message,))?;
